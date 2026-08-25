@@ -222,9 +222,8 @@ safer organization mechanism.
 
 The audit found the following state that should be visible to release managers:
 
-- the superproject pins `backends/rwkvcpp_ref` at
-  `57429ae04f0e017d32132b6ed1410765cef636a9`, which contains the native
-  layer-streaming/grouped-U8 source and regression tests;
+- the superproject pins `backends/rwkvcpp_ref` at the reachable upstream
+  commit `14663c83b6aba4885a47c1fba91204efc74a49d3`;
 - the superproject pins the ChatRWKV submodule at
   `6f83d08ae7be0b895a7c316c83a95f5563abd722`, which contains the DirectML/JIT
   compatibility fix;
@@ -232,14 +231,12 @@ The audit found the following state that should be visible to release managers:
   clone has a deterministic submodule layout;
 - promoted packs and checkpoints are local/ignored artifacts. A wheel or
   source checkout does not provide them; use [`MODEL_IMPORT.md`](MODEL_IMPORT.md).
-- no Git remote is configured in this checkout. The two new submodule commits
-  therefore exist locally until their respective upstream forks/remotes are
-  published; a fresh external clone cannot fetch these exact gitlinks until
-  that publication step is completed.
+- both submodule gitlinks point to commits that are available from their
+  configured upstream remotes, so a fresh external clone can initialize them.
 
-The submodule source is now clean and pinned locally. The remaining release
-action is publication of those nested commits and an external artifact
-manifest containing the exact model, tokenizer, pack, GGML, and native hashes.
+The submodule source is now clean and reproducibly pinned. Model, tokenizer,
+pack, GGML, and native binary artifacts remain local/ignored and are documented
+in [`MODEL_IMPORT.md`](MODEL_IMPORT.md).
 
 ## Documentation audit
 

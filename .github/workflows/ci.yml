@@ -20,7 +20,7 @@ jobs:
       MKL_NUM_THREADS: "1"
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           # The native rwkv.cpp tree is an optional gitlink in this checkout.
           # When its source/fixtures are available, the later steps build and
@@ -28,7 +28,7 @@ jobs:
           submodules: recursive
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
