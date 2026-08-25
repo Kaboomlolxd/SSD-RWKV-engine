@@ -1,0 +1,3 @@
+architecture,memory_cost_gb,fork_time_ms
+VRAM Deep Copy,1250.0,625.0
+SSD CoW Fork,0.125,38.14697265625

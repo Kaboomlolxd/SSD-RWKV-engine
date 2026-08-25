@@ -1,0 +1,5 @@
+Method,Read_Time_ms,Compute_Time_ms,Token_Time_ms,Tok_Per_s,Speedup,Note
+Baseline,625.0,400,1025.0,0.98,1.00x,
+SSD_Speculative_Prefetch,625.0,400,745.0,1.34,1.38x,read_reduction=45%
+Saguaro_Style_B0,625.0,400,1025.0,0.98,1.00x,eff_acceptance=0.84
+MineDraft_Style,625.0,400,668.2,1.50,1.53x,overlap=0.64

@@ -1,0 +1,20 @@
+Metric,Value,Note
+No_Prefetch_tok_per_s,0.00,hit_rate=0.000
+No_Prefetch_avg_latency_ms,633.96,p99=633.96ms
+No_Prefetch_submission_overhead_pct,1.24,SQE overlap: 0%
+Semantic_Prefetch_tok_per_s,0.00,hit_rate=0.750
+Semantic_Prefetch_avg_latency_ms,632.81,p99=632.85ms
+Semantic_Prefetch_submission_overhead_pct,0.42,SQE overlap: 60%
+Gate_Prefetch_Ours_tok_per_s,0.00,hit_rate=0.880
+Gate_Prefetch_Ours_avg_latency_ms,631.82,p99=631.87ms
+Gate_Prefetch_Ours_submission_overhead_pct,0.17,SQE overlap: 95%
+Oracle_Prefetch_tok_per_s,0.00,hit_rate=1.000
+Oracle_Prefetch_avg_latency_ms,631.40,p99=631.40ms
+Oracle_Prefetch_submission_overhead_pct,0.00,SQE overlap: 100%
+calibration_64_tokens,0.357,cal_time=32.0ms
+calibration_128_tokens,0.394,cal_time=64.0ms
+calibration_256_tokens,0.471,cal_time=128.0ms
+calibration_512_tokens,0.621,cal_time=256.0ms
+calibration_1024_tokens,0.806,cal_time=512.0ms
+calibration_2048_tokens,0.876,cal_time=1024.0ms
+calibration_4096_tokens,0.880,cal_time=2048.0ms

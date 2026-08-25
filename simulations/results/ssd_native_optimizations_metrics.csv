@@ -1,0 +1,20 @@
+Optimization,Metric,Value,Note
+HedgedReads,p999_reduction_x,62.4,Tail latency reduction via redundant reads
+HedgedReads,extra_load_pct,0.1,Additional I/O overhead from hedging
+AdaptivePrecision,Fixed_Q2_tok_per_s,16.00,ppl_delta=0.250
+AdaptivePrecision,Fixed_Q4_tok_per_s,8.00,ppl_delta=0.050
+AdaptivePrecision,Fixed_Q8_tok_per_s,4.00,ppl_delta=0.000
+AdaptivePrecision,Adaptive_MultiPrecision_tok_per_s,8.77,ppl_delta=0.127
+StatePark,seq128_mamba_save_ms,2.23,vs transformer 9ms
+StatePark,seq1024_mamba_save_ms,2.23,vs transformer 71ms
+StatePark,seq4096_mamba_save_ms,2.23,vs transformer 286ms
+StatePark,seq32768_mamba_save_ms,2.23,vs transformer 2286ms
+LoRAGalaxy,n10_swap_ms,5.6,"VRAM fits 10, SSD fits 10"
+LoRAGalaxy,n100_swap_ms,5.6,"VRAM fits 100, SSD fits 100"
+LoRAGalaxy,n1000_swap_ms,5.6,"VRAM fits 563, SSD fits 1000"
+LoRAGalaxy,n10000_swap_ms,5.6,"VRAM fits 563, SSD fits 10000"
+LoRAGalaxy,n25000_swap_ms,5.6,"VRAM fits 563, SSD fits 23040"
+ReadDisturb,SLC_days_to_limit,32.4,"Rotation: 0.5s, drive life: 15432 years"
+ReadDisturb,MLC_days_to_limit,9.7,"Rotation: 0.5s, drive life: 4630 years"
+ReadDisturb,TLC_days_to_limit,3.2,"Rotation: 0.5s, drive life: 1543 years"
+ReadDisturb,QLC_days_to_limit,1.0,"Rotation: 0.5s, drive life: 463 years"

@@ -1,0 +1,40 @@
+Model,Method,Tokens_Per_Sweep,Total_Time_s,Tok_Per_s,Extra_VRAM_MB,Speedup_vs_Baseline,Architecture_Note
+Mamba_7B_2bit,Baseline_Autoregressive,1.00,62.5000,8.00,0,1.00x,Baseline
+Mamba_7B_2bit,AS3_Draft_Model,4.00,15.6250,32.00,2000,4.00x,Legacy (VRAM hypocrisy)
+Mamba_7B_2bit,MTP_SSM_StateRoll_k1,2.00,31.2849,15.98,0,2.00x,SSM+StateRoll (acc=1.00)
+Mamba_7B_2bit,MTP_SSM_StateRoll_k2,2.29,27.3970,18.25,0,2.28x,SSM+StateRoll (acc=0.74)
+Mamba_7B_2bit,MTP_SSM_StateRoll_k4,2.42,25.9576,19.26,0,2.41x,SSM+StateRoll (acc=0.63)
+Mamba_7B_2bit,MTP_SSM_Tree_k4_b3,4.51,14.0611,35.56,0,4.44x,SSM+StateRoll+Tree (branching=3)
+Mamba_7B_2bit,MTP_SSM_StateRoll_k6,2.07,30.3961,16.45,0,2.06x,SSM+StateRoll (acc=0.52)
+Mamba_7B_2bit,MTP_SSM_Tree_k6_b3,5.08,12.5498,39.84,0,4.98x,SSM+StateRoll+Tree (branching=3)
+Mamba_7B_2bit,MTP_SSM_StateRoll_k8,1.77,35.6477,14.03,0,1.75x,SSM+StateRoll (acc=0.43)
+Mamba_7B_2bit,MTP_SSM_Tree_k8_b3,4.62,13.8981,35.98,0,4.50x,SSM+StateRoll+Tree (branching=3)
+Mamba_7B_2bit,MTP_SSM_Raw_k6,1.91,32.9108,15.19,0,1.90x,"SSM raw (no state-roll, for comparison)"
+Mamba_7B_2bit,MTP_Transformer_Ref_k6,2.43,25.8922,19.31,0,2.41x,Transformer ref (no state issue)
+Mamba_7B_2bit,MTP_SSM_Adaptive,1.57,39.7274,12.59,0,1.57x,SSM+StateRoll adaptive
+Mamba_70B_2bit,Baseline_Autoregressive,1.00,625.0000,0.80,0,1.00x,Baseline
+Mamba_70B_2bit,AS3_Draft_Model,4.00,156.2500,3.20,2000,4.00x,Legacy (VRAM hypocrisy)
+Mamba_70B_2bit,MTP_SSM_StateRoll_k1,2.00,312.6395,1.60,0,2.00x,SSM+StateRoll (acc=1.00)
+Mamba_70B_2bit,MTP_SSM_StateRoll_k2,2.29,273.6043,1.83,0,2.28x,SSM+StateRoll (acc=0.74)
+Mamba_70B_2bit,MTP_SSM_StateRoll_k4,2.42,258.8838,1.93,0,2.41x,SSM+StateRoll (acc=0.63)
+Mamba_70B_2bit,MTP_SSM_Tree_k4_b3,4.51,139.4847,3.58,0,4.48x,SSM+StateRoll+Tree (branching=3)
+Mamba_70B_2bit,MTP_SSM_StateRoll_k6,2.07,302.7475,1.65,0,2.06x,SSM+StateRoll (acc=0.52)
+Mamba_70B_2bit,MTP_SSM_Tree_k6_b3,5.08,124.0001,4.03,0,5.04x,SSM+StateRoll+Tree (branching=3)
+Mamba_70B_2bit,MTP_SSM_StateRoll_k8,1.77,354.5839,1.41,0,1.76x,SSM+StateRoll (acc=0.43)
+Mamba_70B_2bit,MTP_SSM_Tree_k8_b3,4.62,136.7833,3.66,0,4.57x,SSM+StateRoll+Tree (branching=3)
+Mamba_70B_2bit,MTP_SSM_Raw_k6,1.91,327.7949,1.53,0,1.91x,"SSM raw (no state-roll, for comparison)"
+Mamba_70B_2bit,MTP_Transformer_Ref_k6,2.43,257.8889,1.94,0,2.42x,Transformer ref (no state issue)
+Mamba_70B_2bit,MTP_SSM_Adaptive,1.58,395.9096,1.26,0,1.58x,SSM+StateRoll adaptive
+Mamba_405B_2bit,Baseline_Autoregressive,1.00,3607.1429,0.14,0,1.00x,Baseline
+Mamba_405B_2bit,AS3_Draft_Model,4.00,901.7857,0.55,2000,4.00x,Legacy (VRAM hypocrisy)
+Mamba_405B_2bit,MTP_SSM_StateRoll_k1,2.00,1803.8504,0.28,0,2.00x,SSM+StateRoll (acc=1.00)
+Mamba_405B_2bit,MTP_SSM_StateRoll_k2,2.29,1578.1673,0.32,0,2.29x,SSM+StateRoll (acc=0.74)
+Mamba_405B_2bit,MTP_SSM_StateRoll_k4,2.42,1492.3890,0.34,0,2.42x,SSM+StateRoll (acc=0.63)
+Mamba_405B_2bit,MTP_SSM_Tree_k4_b3,4.51,802.2095,0.62,0,4.50x,SSM+StateRoll+Tree (branching=3)
+Mamba_405B_2bit,MTP_SSM_StateRoll_k6,2.07,1744.2351,0.29,0,2.07x,SSM+StateRoll (acc=0.52)
+Mamba_405B_2bit,MTP_SSM_Tree_k6_b3,5.08,711.9118,0.70,0,5.07x,SSM+StateRoll+Tree (branching=3)
+Mamba_405B_2bit,MTP_SSM_StateRoll_k8,1.77,2041.6967,0.24,0,1.77x,SSM+StateRoll (acc=0.43)
+Mamba_405B_2bit,MTP_SSM_Tree_k8_b3,4.62,783.9402,0.64,0,4.60x,SSM+StateRoll+Tree (branching=3)
+Mamba_405B_2bit,MTP_SSM_Raw_k6,1.91,1888.5424,0.26,0,1.91x,"SSM raw (no state-roll, for comparison)"
+Mamba_405B_2bit,MTP_Transformer_Ref_k6,2.43,1485.7890,0.34,0,2.43x,Transformer ref (no state issue)
+Mamba_405B_2bit,MTP_SSM_Adaptive,1.58,2281.5335,0.22,0,1.58x,SSM+StateRoll adaptive

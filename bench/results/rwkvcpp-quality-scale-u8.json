@@ -1,0 +1,66 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.5,
+    "maximum_kl": 1.401923656463623,
+    "maximum_state_relative_l2": 0.20152515194133158
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 1.9370143413543701,
+        "mean_abs": 1.544875979423523,
+        "max_abs": 9.180949211120605,
+        "relative_l2": 0.19581116755262304,
+        "cosine": 0.981668504860604,
+        "top_k": 10,
+        "top_k_overlap": 0.5,
+        "min_top_k_overlap": 0.5,
+        "kl_candidate_to_reference": 1.401923656463623,
+        "max_kl_candidate_to_reference": 1.401923656463623
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.07204094529151917,
+        "mean_abs": 0.00876303669065237,
+        "max_abs": 20.65924835205078,
+        "relative_l2": 0.15330316667101057,
+        "cosine": 0.9882102164897953
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 0.8111379742622375,
+        "mean_abs": 0.6511874198913574,
+        "max_abs": 3.8735599517822266,
+        "relative_l2": 0.05062392894121658,
+        "cosine": 0.9987304240153788,
+        "top_k": 10,
+        "top_k_overlap": 0.800000011920929,
+        "min_top_k_overlap": 0.800000011920929,
+        "kl_candidate_to_reference": 0.16510435938835144,
+        "max_kl_candidate_to_reference": 0.16510435938835144
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.06633853912353516,
+        "mean_abs": 0.012047791853547096,
+        "max_abs": 21.101760864257812,
+        "relative_l2": 0.20152515194133158,
+        "cosine": 0.9795591722323654
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-u8"
+}

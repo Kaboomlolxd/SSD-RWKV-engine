@@ -1,0 +1,138 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,microtype}
+\usepackage[hidelinks]{hyperref}
+
+\title{Reliable and Update-Friendly SSD Model Arrays:\\Append-Only Adapter Logging and Application-Layer Erasure Coding for Streamed Weights}
+\author{[Author Name]}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+SSD-native inference is usually evaluated as a read-only bandwidth problem. Real deployments also need to survive drive faults and absorb frequent adapter updates without destroying flash endurance. This paper studies those two neglected dimensions together. We present an update path that logs LoRA-style parameter deltas into an append-only zoned stream rather than rewriting large sparse blocks, and a reliability path that applies Reed-Solomon coding at the application layer across compressed model shards. In the simulated update path, an append-only delta log reduces physical writes for 100 updates from 4000~MB to 720~MB, cutting write amplification from 10.0$\times$ to 1.8$\times$ while raising effective write bandwidth from 0.70~GB/s to 1.98~GB/s. In the reliability path, a compressed 70B-class model stored across coded shards recovers from a single drive failure in 927~ms and from two failures in 1218~ms under the modeled reconstruction budget. The contribution is a storage-systems argument that SSD-resident model arrays should be designed not only for read bandwidth, but also for maintainability and survivability.
+\end{abstract}
+
+\section{Introduction}
+Most work on SSD-backed inference treats the model as static and the storage subsystem as a pure read path. That is a useful first approximation, but it is incomplete. In practice, two additional requirements appear quickly.
+
+First, modern inference stacks frequently rely on adapters or deltas rather than immutable base checkpoints. Naively rewriting small updates into flash can create pathological write amplification. Second, model serving on an SSD array should degrade gracefully under device failure rather than crashing outright.
+
+This paper argues that these are not secondary operational details. They are core design constraints for any serious SSD-native inference system. We therefore study two mechanisms together:
+\begin{enumerate}
+    \item an append-only delta log for adapter updates, and
+    \item application-layer erasure coding across compressed model shards.
+\end{enumerate}
+
+\section{Design Overview}
+\subsection{Append-Only Delta Logging}
+Adapter updates are naturally small and additive. This makes them a poor fit for rewrite-heavy block updates and a good fit for an append-only log. The design evaluated here places LoRA-style deltas into a zoned append-only stream, treating flash as a write-ahead log for parameter updates. Periodic compaction folds the log back into a stable base only when it grows beyond a configured threshold.
+
+The core systems claim is straightforward: if updates are sparse and sequentially appended, write amplification should be governed by compaction policy rather than by the physical mismatch between tiny logical deltas and large flash program units.
+
+\subsection{Application-Layer Erasure Coding}
+The reliability path shards the compressed model across drives and applies application-layer Reed-Solomon coding. This differs from relying exclusively on lower-layer RAID semantics because the inference system itself can reason about model-shard placement, reconstruction order, and serving-time fallback behavior.
+
+The systems goal is not perfect invisibility of failure. It is to turn a drive loss from a full-model crash into a bounded reconstruction pause or degraded serving interval.
+
+\section{Evaluation Setup}
+The paper uses simulation results derived from parameterized update and fault-tolerance benchmarks. The key point is not that every deployment will match these exact numbers. It is that the update and recovery costs are explicit and measurable rather than hand-waved away.
+
+\section{Update-Path Results}
+Table~\ref{tab:lora} summarizes the write-path comparison for 100 adapter updates.
+
+\begin{table}[t]
+\centering
+\caption{Adapter-update write path: general namespace rewriting versus append-only delta logging.}
+\label{tab:lora}
+\begin{tabular}{lrrrrr}
+\toprule
+Method & Nominal Writes (MB) & Physical Writes (MB) & WA & Time (s) & Eff. BW (GB/s) \\
+\midrule
+General namespace rewrite & 400.0 & 4000.0 & 10.0$\times$ & 0.56 & 0.70 \\
+Append-only delta log & 400.0 & 720.0 & 1.8$\times$ & 0.20 & 1.98 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The results in Table~\ref{tab:lora} show why an append-only update path matters. The nominal logical work is identical in both cases, but the physical flash cost is radically different. Sequential logging cuts physical writes by 82\%, reduces update time by nearly 3$\times$, and approaches a write path that is governed by compaction instead of flash-block mismatch.
+
+\section{Fault-Tolerance Results}
+Table~\ref{tab:ec} summarizes the coded-array results for two representative model sizes.
+
+\begin{table}[t]
+\centering
+\caption{Application-layer erasure coding for compressed model arrays.}
+\label{tab:ec}
+\begin{tabular}{lrrrrr}
+\toprule
+Model & Compressed Size (GB) & Total Coded Storage (GB) & Normal tok/s & 1-fail Recovery (ms) & 2-fail Recovery (ms) \\
+\midrule
+70B-class & 17.5 & 26.2 & 0.98 & 927 & 1218 \\
+405B-class & 101.0 & 151.5 & 0.25 & 5300 & 6984 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The main lesson is not that recovery is free. It is that failure can be turned into a bounded reconstruction event rather than an immediate service collapse. For the 70B-class configuration, a single-drive failure remains sub-second in the modeled recovery path. Even the larger 405B-class path remains in the few-second regime rather than requiring full manual reprovisioning before service can continue.
+
+\section{Why These Two Mechanisms Belong Together}
+Updateability and fault tolerance are often treated as separate operational concerns. In SSD-native inference they are tightly coupled because both determine whether the array behaves like a maintainable system or a fragile benchmark artifact.
+
+An append-only adapter path reduces endurance pressure and background garbage collection. Application-layer coding reduces the blast radius of device failure. Together they define a control plane for the weight array:
+\begin{itemize}
+    \item updates stay sequential,
+    \item base checkpoints remain mostly cold,
+    \item failures become reconstruction events instead of outages.
+\end{itemize}
+
+This is especially relevant for SSD-backed serving because flash arrays are attractive precisely in cost-sensitive deployments where operators may have more capacity than redundancy headroom.
+
+\section{Discussion}
+The paper's novelty is not the invention of zoned storage, LoRA, or Reed-Solomon coding. It lies in adapting those ideas to the specific needs of streamed-weight inference and showing that they materially change the maintainability envelope of the system.
+
+The write path also has an indirect performance benefit. By avoiding repeated rewrite amplification, it reduces the chance that background cleanup will interfere with the read-heavy inference path. That interaction is not fully quantified here, but it is a meaningful systems reason to treat update and serving paths together.
+
+\section{Limitations}
+The paper is intentionally scoped.
+\begin{itemize}
+    \item The update results are modeled around repeated adapter deltas rather than arbitrary full-model edits.
+    \item The erasure-coding results are application-layer recovery estimates, not production measurements from a live multi-drive failure test.
+    \item The paper does not yet model tail-latency interaction between recovery traffic and simultaneous serving traffic in detail.
+    \item The write-path evaluation assumes a zoned or append-friendly layout; a conventional filesystem may capture less of the benefit.
+\end{itemize}
+
+These limits do not negate the mechanisms. They simply define where a future implementation effort should focus.
+
+\section{Related Work}
+LoRA-style adaptation dramatically reduces the amount of model state that must be updated for many downstream tasks~\cite{lora}. Zoned namespaces and log-structured designs provide a natural substrate for append-friendly updates on flash~\cite{zns,lfs}. Reed-Solomon coding is classical, but its application at the inference-system layer is less common than relying purely on block-device redundancy~\cite{rs}. This paper's contribution is to treat model-array maintenance as a first-class design problem rather than a deployment afterthought.
+
+\section{Conclusion}
+SSD-native inference should not be optimized only for the idealized read path. A practical system also needs to survive updates and faults without turning flash into a source of uncontrolled write amplification or catastrophic failure. The append-only delta log and application-layer erasure-coding path presented here show that both concerns can be addressed within the same storage-native design philosophy.
+
+\begin{thebibliography}{99}
+
+\bibitem{lora}
+Edward Hu et al.
+\newblock LoRA: Low-Rank Adaptation of Large Language Models.
+\newblock 2021.
+
+\bibitem{zns}
+NVMe Consortium.
+\newblock Zoned Namespaces Command Set Specification.
+\newblock Specification document.
+
+\bibitem{lfs}
+Mendel Rosenblum and John Ousterhout.
+\newblock The Design and Implementation of a Log-Structured File System.
+\newblock \emph{ACM Transactions on Computer Systems}, 1992.
+
+\bibitem{rs}
+Irving Reed and Gustave Solomon.
+\newblock Polynomial Codes Over Certain Finite Fields.
+\newblock \emph{Journal of the Society for Industrial and Applied Mathematics}, 1960.
+
+\end{thebibliography}
+
+\end{document}

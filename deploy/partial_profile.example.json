@@ -1,0 +1,7 @@
+{
+  "description": "Example partial residency profile for a 32-layer model on 8GB GPU",
+  "num_layers": 32,
+  "resident_layer_ids": [0, 1, 30, 31],
+  "always_resident_tensors": ["embed", "head", "ln_out", "norm"],
+  "notes": "First/last blocks + small tensors stay in VRAM; middle layers stream from SSD each token."
+}

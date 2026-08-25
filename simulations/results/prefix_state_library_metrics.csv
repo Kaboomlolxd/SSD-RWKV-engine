@@ -1,0 +1,9 @@
+metric,value,note
+num_requests,2000,
+library_capacity,512,
+cache_hit_rate,0.0485,
+total_tokens_saved_sum,26945,
+mean_latency_ms_no_library,12.7344,
+mean_latency_ms_with_library,12.1306,
+mean_latency_speedup,1.0498,
+evidence_tier,Simulated / inspired,Not deployment measurement

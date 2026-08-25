@@ -1,0 +1,3 @@
+Strategy,Reads_Per_Block,Threshold_Breached,Silent_WAF_Penalty
+Static Weight Blocks,10000000.0,True,70.0
+3-Copy Rotation,3333333.3333333335,True,0.0

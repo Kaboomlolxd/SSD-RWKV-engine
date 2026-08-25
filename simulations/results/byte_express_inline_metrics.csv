@@ -1,0 +1,3 @@
+Approach,NVMe_Commands,Overhead_ms,SQ_Util,Eff_BW_GBps
+Standard Separate Reads,1280000,6400.0,0.5,7.0
+Inline Metadata (ByteExpress),640000,3200.0,1.0,14.0

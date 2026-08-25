@@ -1,0 +1,8 @@
+Metric,70B_EC,405B_EC,Note
+model_size_gb,17.5,101.0,Compressed model size
+shard_size_gb,4.38,25.25,Per-shard size
+total_storage_gb,26.2,151.5,Including parity
+encoding_time_s,0.9,5.0,One-time encoding
+tok_per_s_normal,0.98,0.25,Normal inference
+recovery_1fail_time_ms,927,5300,1 drive(s) failed
+recovery_2fail_time_ms,1218,6984,2 drive(s) failed

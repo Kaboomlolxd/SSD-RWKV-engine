@@ -1,0 +1,8 @@
+[package]
+name = "mamba_io_uring_bench"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+io-uring = "0.6"
+libc = "0.2"

@@ -1,0 +1,6 @@
+Path,Kernel_ms,Copy_ms,Total_ms,SmartSSD_Equivalent
+Standard Linux I/O (fread/mmap),0.8,0.8,1.6,No
+io_uring (async kernel),0.24,0.8,1.04,No
+SPDK (kernel-bypass),0.05,0.0,0.05,Partial
+GPUDirect Storage (GDS),0.02,0.0,0.02,Yes (software)
+SPDK + GDS Combined,0.01,0.0,0.01,Yes (software)

@@ -1,0 +1,4 @@
+NAND_Mode,PE_Cycles,Drive_Wear_100M_Tokens_%,Viable_for_State
+QLC (Weights only),1000,1220.703125,No
+TLC (Mainstream),3000,406.9010416666667,Marginal
+pSLC (State Partition),30000,40.69010416666667,Yes

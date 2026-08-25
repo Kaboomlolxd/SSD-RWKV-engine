@@ -1,0 +1,66 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.8999999761581421,
+    "maximum_kl": 0.05044109746813774,
+    "maximum_state_relative_l2": 0.10678327389452555
+  },
+  "gates": {
+    "minimum_top_k_overlap": true,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 0.9458804130554199,
+        "mean_abs": 0.8837931156158447,
+        "max_abs": 2.9006357192993164,
+        "relative_l2": 0.09561831790947521,
+        "cosine": 0.9994143078074842,
+        "top_k": 10,
+        "top_k_overlap": 0.8999999761581421,
+        "min_top_k_overlap": 0.8999999761581421,
+        "kl_candidate_to_reference": 0.05044109746813774,
+        "max_kl_candidate_to_reference": 0.05044109746813774
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.01692524179816246,
+        "mean_abs": 0.0018256688490509987,
+        "max_abs": 4.709146499633789,
+        "relative_l2": 0.036016848329189693,
+        "cosine": 0.9993765954190118
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 0.8455524444580078,
+        "mean_abs": 0.7547088265419006,
+        "max_abs": 2.571380615234375,
+        "relative_l2": 0.05277179760863732,
+        "cosine": 0.9997153933884214,
+        "top_k": 10,
+        "top_k_overlap": 0.8999999761581421,
+        "min_top_k_overlap": 0.8999999761581421,
+        "kl_candidate_to_reference": 0.038174327462911606,
+        "max_kl_candidate_to_reference": 0.038174327462911606
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.03515138477087021,
+        "mean_abs": 0.006371959578245878,
+        "max_abs": 1.6971473693847656,
+        "relative_l2": 0.10678327389452555,
+        "cosine": 0.9943396792682997
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-u8-grouped"
+}

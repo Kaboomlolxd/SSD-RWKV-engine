@@ -1,0 +1,10 @@
+# Core engine
+torch>=2.1.0
+numpy>=1.24.0
+safetensors>=0.4.0
+pyyaml>=6.0
+numba>=0.66.0
+
+# Dev / tests: pip install -e ".[dev]"
+
+# ChatRWKV is NOT on PyPI — clone https://github.com/BlinkDL/ChatRWKV and set CHATRWKV_ROOT

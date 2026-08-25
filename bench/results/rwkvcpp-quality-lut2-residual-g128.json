@@ -1,0 +1,66 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.0,
+    "maximum_kl": 5.660321235656738,
+    "maximum_state_relative_l2": 1.2349497336814113
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 14.676557540893555,
+        "mean_abs": 14.030834197998047,
+        "max_abs": 35.20348358154297,
+        "relative_l2": 1.4836414682539873,
+        "cosine": 0.9482930211102455,
+        "top_k": 10,
+        "top_k_overlap": 0.0,
+        "min_top_k_overlap": 0.0,
+        "kl_candidate_to_reference": 5.2061872482299805,
+        "max_kl_candidate_to_reference": 5.2061872482299805
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.44311776757240295,
+        "mean_abs": 0.05301911011338234,
+        "max_abs": 103.68560791015625,
+        "relative_l2": 0.942951775280446,
+        "cosine": 0.5905331005612047
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 7.042582988739014,
+        "mean_abs": 5.948245048522949,
+        "max_abs": 25.34503173828125,
+        "relative_l2": 0.43953487776895034,
+        "cosine": 0.9674715975696303,
+        "top_k": 10,
+        "top_k_overlap": 0.10000000149011612,
+        "min_top_k_overlap": 0.10000000149011612,
+        "kl_candidate_to_reference": 5.660321235656738,
+        "max_kl_candidate_to_reference": 5.660321235656738
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.4065230190753937,
+        "mean_abs": 0.06532437354326248,
+        "max_abs": 51.476837158203125,
+        "relative_l2": 1.2349497336814113,
+        "cosine": 0.24996474543574357
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-lut2-residual-g128"
+}

@@ -1,0 +1,68 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.20000000298023224,
+    "maximum_kl": 6.618285179138184,
+    "maximum_state_relative_l2": 1.145532258564936
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 5.230329990386963,
+        "mean_abs": 4.619163513183594,
+        "max_abs": 15.432622909545898,
+        "relative_l2": 0.5287297536254253,
+        "cosine": 0.9683309756798991,
+        "top_k": 10,
+        "top_k_overlap": 0.30000001192092896,
+        "min_top_k_overlap": 0.30000001192092896,
+        "kl_candidate_to_reference": 1.364638090133667,
+        "max_kl_candidate_to_reference": 1.364638090133667
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.15047557651996613,
+        "mean_abs": 0.018198948353528976,
+        "max_abs": 29.84453773498535,
+        "relative_l2": 0.3202109962109797,
+        "cosine": 0.9498149735806586
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 3.8765785694122314,
+        "mean_abs": 3.080911636352539,
+        "max_abs": 16.64324951171875,
+        "relative_l2": 0.24194121265162372,
+        "cosine": 0.970293919381839,
+        "top_k": 10,
+        "top_k_overlap": 0.20000000298023224,
+        "min_top_k_overlap": 0.20000000298023224,
+        "kl_candidate_to_reference": 6.618285179138184,
+        "max_kl_candidate_to_reference": 6.618285179138184
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.37709009647369385,
+        "mean_abs": 0.05925105884671211,
+        "max_abs": 52.41790771484375,
+        "relative_l2": 1.145532258564936,
+        "cosine": 0.35825125598035695
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-mixed-extra50mb-v2",
+  "native_upload_scope": "block_layers_only",
+  "resident_native_tensors": "embedding, head, and non-block tensors remain from the ggml checkpoint"
+}

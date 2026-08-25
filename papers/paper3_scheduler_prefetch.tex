@@ -1,0 +1,148 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,microtype}
+\usepackage[hidelinks]{hyperref}
+
+\title{Scheduling the SSD-Weight Critical Path:\\Micro-Pipelining, Recurrent Multi-Token Prediction, and Gate-Driven Prefetch Under One Bandwidth Budget}
+\author{[Author Name]}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Once SSD-native inference has been reduced to sequential layer streaming, throughput is no longer determined by raw storage bandwidth alone. It depends on how the decode loop overlaps I/O with compute, how many accepted tokens are obtained per weight sweep, and whether the runtime can hide host-side submission overhead without violating the same SSD bandwidth budget. This paper presents a scheduler-oriented view of recurrent SSD-native inference that combines three components: sub-layer micro-pipelining, recurrent multi-token prediction (MTP), and gate-driven weight prefetching. The central claim is not that these effects multiply independently. Rather, they must be composed inside one schedule. In simulation, recurrent MTP with state rolling yields a 2.06$\times$ speedup at $k=6$ on a 70B 2-bit Mamba-class model, while tree-style verification reaches 5.04$\times$ under the same model assumptions. Separately, gate-driven prefetching reduces host submission-overhead share from 1.24\% to 0.17\% and lowers average per-request latency from 633.96~ms to 631.82~ms at an 88\% prefetch hit rate. The paper's contribution is a disciplined scheduler model for recurrent SSD-native inference, together with a narrow novelty claim for gate-driven prefetching as a lightweight, model-internal timing signal for storage overlap.
+\end{abstract}
+
+\section{Introduction}
+The moment SSD-native inference becomes sequential, the next bottleneck is scheduling. Compression shrinks bytes, but the runtime still must decide how to overlap reads with compute, how to amortize a full weight sweep over more than one accepted token, and how to avoid wasting CPU time posting I/O too late.
+
+These issues are often presented as independent speedups. That is misleading. Micro-pipelining, speculative decoding, and prefetching all operate on the same critical path and compete for the same bandwidth and wall-clock budget. The main argument of this paper is therefore methodological: the correct unit of reasoning is one composed decode schedule, not a multiplication table of free-standing gains. On the host side, this includes the timing of submission-queue work in an io\_uring-style path rather than only the device-side transfer itself~\cite{io_uring}.
+
+\section{Scheduler Model}
+We model a streamed layer as a sequence of chunks. A naive serial execution costs
+\begin{equation}
+T_{\text{serial}} = T_{\text{io}} + T_{\text{compute}}.
+\end{equation}
+Micro-pipelining splits the layer into $K$ chunks and overlaps read of chunk $i+1$ with compute on chunk $i$, yielding the standard bound
+\begin{equation}
+T_{\text{pipeline}} \approx \max(T_{\text{io,total}}, T_{\text{compute,total}})
+\end{equation}
+in the balanced case. The important interpretation is that overlap acts as an efficiency factor on wall clock. It is not an additional multiplicative speedup on top of unrelated scheduler choices.
+
+On top of this base schedule, recurrent MTP changes the number of accepted tokens per weight sweep. If the base sweep time is $T_{\text{sweep}}$ and the expected accepted tokens per sweep is $A$, then throughput scales as
+\begin{equation}
+\text{tok/s} = \frac{A}{T_{\text{sweep}}},
+\end{equation}
+subject to verification cost and prediction accuracy. Prefetching then acts on the same schedule by attempting to move I/O-submission work earlier, reducing exposed host overhead but not creating a separate bandwidth budget.
+
+\section{Recurrent MTP}
+Traditional speculative decoding often relies on a separate draft model. In SSD-native recurrent inference, that can defeat the memory goal by demanding extra model residency. The approach evaluated here instead uses embedded MTP heads and explicitly models the recurrent-state penalty: deeper predictions operate on older state estimates than in a Transformer with direct parallel context access.
+
+The paper treats state rolling as a mitigation, not as a claim of clean-sheet novelty. The more defensible contribution is the scheduler view: recurrent MTP should be evaluated in terms of accepted tokens per sweep under fixed storage assumptions.
+
+For clarity, the results reported in this paper come from a simulation model with explicit acceptance-rate assumptions for each $k$ and verification mode. The $k=6$ recurrent state-rolling path uses an acceptance regime centered around 2.07 accepted tokens per sweep, while the tree-style verifier at $k=6$ and branching factor $b=3$ reaches 5.08 accepted tokens per sweep under the strongest modeled assumptions. These numbers should therefore be read as scheduler-model outputs, not measured production serving results.
+
+\begin{table}[t]
+\centering
+\caption{Representative recurrent MTP results from the scheduler model.}
+\label{tab:mtp}
+\begin{tabular}{lrrrr}
+\toprule
+Model & Method & Tokens/Sweep & tok/s & Speedup \\
+\midrule
+70B 2-bit & Baseline & 1.00 & 0.80 & 1.00$\times$ \\
+70B 2-bit & StateRoll $k=2$ & 2.29 & 1.83 & 2.28$\times$ \\
+70B 2-bit & StateRoll $k=6$ & 2.07 & 1.65 & 2.06$\times$ \\
+70B 2-bit & Tree $k=4, b=3$ & 4.51 & 3.58 & 4.48$\times$ \\
+70B 2-bit & Tree $k=6, b=3$ & 5.08 & 4.03 & 5.04$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Table~\ref{tab:mtp} shows the two main regimes. Conservative state-rolled MTP roughly doubles throughput at moderate depth. Tree-style verification can push the speedup beyond 5$\times$, but it also rests on stronger scheduling and verification assumptions. For that reason, this paper treats tree-style results as a modeled upper-end regime rather than a default deployment claim.
+
+\section{Gate-Driven Prefetch}
+The narrowest original mechanism in this paper is gate-driven prefetch. The idea is simple: use a lightweight signal already produced by the recurrent model's internal gating behavior to predict when the next chunk should be posted to the storage queue. This is not a claim of oracle prediction and not a replacement for the main overlap schedule. It is a way to hide host-side submission latency without introducing a separate draft model or a heavyweight predictor.
+
+\begin{table}[t]
+\centering
+\caption{Submission-overhead reduction from gate-driven prefetching.}
+\label{tab:prefetch}
+\begin{tabular}{lrrr}
+\toprule
+Method & Avg. Latency (ms) & Submission Overhead & Hit Rate \\
+\midrule
+No prefetch & 633.96 & 1.24\% & 0.00 \\
+Semantic prefetch baseline & 632.81 & 0.42\% & 0.75 \\
+Gate-driven prefetch & 631.82 & 0.17\% & 0.88 \\
+Oracle prefetch & 631.40 & 0.00\% & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The absolute latency reduction in Table~\ref{tab:prefetch} is modest because submission overhead is only one piece of the full request. However, the mechanism nearly removes the exposed submission component and approaches the oracle bound more closely than the semantic-prefetch baseline. That is exactly the kind of improvement this paper claims: small but principled scheduler savings that compose cleanly with the main decode loop.
+
+\section{Composing the Critical Path}
+The most important systems rule in this paper is that overlap, prediction, and prefetch must be composed through one schedule:
+\begin{enumerate}
+    \item define bytes per layer after compression,
+    \item define per-layer time under one I/O and compute budget,
+    \item apply prediction as accepted tokens per sweep,
+    \item apply prefetch only as latency hiding on the same stream.
+\end{enumerate}
+
+This avoids the common error of multiplying a pipeline speedup, an MTP speedup, and a prefetch speedup as if they acted on unrelated resources. In reality, the mechanisms interfere. A saturated micro-pipeline leaves little room for speculative prefetch. A more aggressive tree verifier may increase verification cost or consume bandwidth that was previously idle. The scheduler must account for those interactions explicitly.
+
+\section{Discussion}
+The paper's empirical message is intentionally asymmetric. Recurrent MTP provides the largest modeled gains. Gate-driven prefetch provides smaller but cleaner scheduler improvements. Micro-pipelining is essential as the base overlap mechanism, but its value is best expressed as a schedule discipline rather than a single universal number.
+
+This is exactly why the paper keeps token throughput as a derived quantity rather than a standalone headline. The stronger claim is that recurrent SSD-native inference admits a principled scheduler story in which each knob has a defined place in the same resource budget.
+
+\section{Limitations}
+The paper has several important limitations.
+\begin{itemize}
+    \item The MTP results are simulated and depend on model-specific acceptance assumptions.
+    \item State rolling should be treated as a concrete mitigation in an active prior-art area, not an unqualified originality claim.
+    \item Gate-driven prefetch improves a relatively small component of end-to-end latency.
+    \item The paper does not report a full implementation of the unified scheduler inside a production serving engine.
+\end{itemize}
+
+These are acceptable limits for a scheduler paper as long as they remain explicit, which is why the paper avoids stronger claims than the current evidence supports.
+
+\section{Related Work}
+Embedded multi-token prediction is closely related to Medusa and EAGLE-style speculative decoding~\cite{medusa,eagle}. Mamba-specific speculative decoding has become an active area through systems such as Mamba Drafters and SpecMamba, which is why this paper makes only a narrow novelty claim around scheduler composition and gate-driven prefetch~\cite{mambadrafters,specmamba}. More broadly, asynchronous scheduling and lookahead prefetching have been studied in MoE and serving runtimes; the distinguishing feature here is that all scheduling decisions are made under a single SSD weight-streaming budget.
+
+\section{Conclusion}
+Once SSD-native inference becomes a sequential-streaming problem, scheduling becomes the next decisive systems problem. The contribution of this paper is not a bag of independent multipliers. It is a disciplined scheduler model that explains how micro-pipelining, recurrent MTP, and gate-driven prefetch interact on one critical path. That framing makes the resulting throughput claims smaller, but much more credible.
+
+\begin{thebibliography}{99}
+
+\bibitem{medusa}
+Tianle Cai et al.
+\newblock Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads.
+\newblock 2024.
+
+\bibitem{eagle}
+Yuhui Li et al.
+\newblock EAGLE: Speculative Sampling Requires Rethinking Feature Uncertainty.
+\newblock 2024.
+
+\bibitem{mambadrafters}
+Daewon Choi et al.
+\newblock Mamba Drafters for Speculative Decoding.
+\newblock 2025.
+
+\bibitem{specmamba}
+Linfeng Zhong et al.
+\newblock SpecMamba: Accelerating Mamba Inference on FPGA with Speculative Decoding.
+\newblock 2025.
+
+\bibitem{io_uring}
+Jens Axboe.
+\newblock io\_uring: Efficient IO with Shared Submission and Completion Queues.
+\newblock Linux kernel documentation.
+
+\end{thebibliography}
+
+\end{document}

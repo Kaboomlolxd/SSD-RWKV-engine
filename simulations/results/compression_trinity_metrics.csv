@@ -1,0 +1,5 @@
+Stage,Payload_MB,Stage_Compression_Ratio,Cumulative_Compression_Ratio,Effective_SSD_BW_GBs,SSD_Read_ms,GPU_Decompress_ms,CPU_Decompress_ms,Total_GPU_ms,Total_CPU_ms,Baseline_Read_ms,GPU_Speedup,CPU_Speedup,Note
+0_Baseline_FP16,256.00,1.00,1.00,14.0,17.8571,1.2500,3.1250,19.1071,20.9821,17.8571,0.93,0.85,Uncompressed FP16 dense weights
+1_Sparsity_2of4_FP16,144.00,1.78,1.78,24.9,10.0446,0.7031,1.7578,10.7478,11.8025,17.8571,1.66,1.51,FP16 sparse: 36 bits/group (2x16 values + 4 metadata). Also provides 2x Tensor Core compute speedup.
+2_LUT_VectorQuant_2bit,32.02,4.50,8.00,111.9,2.2332,0.1563,0.3908,2.3896,2.6240,17.8571,7.47,6.81,"2-bit sparse: 8 bits/group (2x2 + 4 meta). Same as pure 2-bit quant (32.02 MB): metadata cancels sparsity savings. Sparsity value is compute, not storage."
+3_ANS_Entropy_nvCOMP,25.61,1.25,10.00,139.9,1.7866,0.1251,0.3127,1.9116,2.0992,17.8571,9.34,8.51,ANS lossless via nvCOMP: 80% of input retained (20% compressed away). Decoded on CUDA cores at ~200 GB/s. NOT NVDEC.

@@ -1,0 +1,21 @@
+Path,Description,Compression_Ratio,Compressed_Size_GB,Decompress_GBs,T_IO_ms,T_Decompress_ms,T_Compute_ms,T_Pipelined_ms,Tok_per_s,GPU_For_Decompress,PPL_70B_Estimate,Source,arXiv
+A_Compression_Trinity,Sparsity -> LUT 2-bit -> ANS/nvCOMP,10.0,1.40,200,50.00,7.00,400.00,440.00,2.27,True,~5.0,QuIP#/AQLM + nvCOMP,N/A
+B_BTC_LLM,Sparsity -> BTC-LLM 0.8-bit -> ANS,17.0,0.82,150,29.41,5.49,400.00,440.00,2.27,True,~4.7,"BTC-LLM (Gu et al., 2025)",2506.12040
+C_PTQTP,"Ternary 1.58-bit, multiplication-free",10.0,1.40,900,50.00,1.56,86.39,95.03,10.52,True,~8.0,"PTQTP (Xiao et al., 2025)",2509.16989
+E_DPU_Inline,Hardware Decompression on NIC before PCIe,10.0,1.40,200,50.00,7.00,400.00,440.00,2.27,False,~5.0,DPU Inline (Thesis Chapter 10ss),N/A
+D_VcLLM,Sparsity -> LUT 2-bit -> NVDEC hardware,10.0,1.40,1,50.00,1272.73,400.00,1400.00,0.71,False,~5.0,"VcLLM (Xu et al., 2024)",2407.00467
+A_Compression_Trinity,Sparsity -> LUT 2-bit -> ANS/nvCOMP,10.0,2.60,200,92.86,13.00,400.00,440.00,2.27,True,~5.0,QuIP#/AQLM + nvCOMP,N/A
+B_BTC_LLM,Sparsity -> BTC-LLM 0.8-bit -> ANS,17.0,1.53,150,54.62,10.20,400.00,440.00,2.27,True,~4.7,"BTC-LLM (Gu et al., 2025)",2506.12040
+C_PTQTP,"Ternary 1.58-bit, multiplication-free",10.0,2.60,900,92.86,2.89,86.39,102.14,9.79,True,~8.0,"PTQTP (Xiao et al., 2025)",2509.16989
+E_DPU_Inline,Hardware Decompression on NIC before PCIe,10.0,2.60,200,92.86,13.00,400.00,440.00,2.27,False,~5.0,DPU Inline (Thesis Chapter 10ss),N/A
+D_VcLLM,Sparsity -> LUT 2-bit -> NVDEC hardware,10.0,2.60,1,92.86,2363.64,400.00,2600.00,0.38,False,~5.0,"VcLLM (Xu et al., 2024)",2407.00467
+A_Compression_Trinity,Sparsity -> LUT 2-bit -> ANS/nvCOMP,10.0,14.00,200,500.00,70.00,400.00,550.00,1.82,True,~5.0,QuIP#/AQLM + nvCOMP,N/A
+B_BTC_LLM,Sparsity -> BTC-LLM 0.8-bit -> ANS,17.0,8.24,150,294.12,54.90,400.00,440.00,2.27,True,~4.7,"BTC-LLM (Gu et al., 2025)",2506.12040
+C_PTQTP,"Ternary 1.58-bit, multiplication-free",10.0,14.00,900,500.00,15.56,86.39,550.00,1.82,True,~8.0,"PTQTP (Xiao et al., 2025)",2509.16989
+E_DPU_Inline,Hardware Decompression on NIC before PCIe,10.0,14.00,200,500.00,70.00,400.00,550.00,1.82,False,~5.0,DPU Inline (Thesis Chapter 10ss),N/A
+D_VcLLM,Sparsity -> LUT 2-bit -> NVDEC hardware,10.0,14.00,1,500.00,12727.27,400.00,14000.00,0.07,False,~5.0,"VcLLM (Xu et al., 2024)",2407.00467
+A_Compression_Trinity,Sparsity -> LUT 2-bit -> ANS/nvCOMP,10.0,81.00,200,2892.86,405.00,400.00,3182.14,0.31,True,~5.0,QuIP#/AQLM + nvCOMP,N/A
+B_BTC_LLM,Sparsity -> BTC-LLM 0.8-bit -> ANS,17.0,47.65,150,1701.68,317.65,400.00,1871.85,0.53,True,~4.7,"BTC-LLM (Gu et al., 2025)",2506.12040
+C_PTQTP,"Ternary 1.58-bit, multiplication-free",10.0,81.00,900,2892.86,90.00,86.39,3182.14,0.31,True,~8.0,"PTQTP (Xiao et al., 2025)",2509.16989
+E_DPU_Inline,Hardware Decompression on NIC before PCIe,10.0,81.00,200,2892.86,405.00,400.00,3182.14,0.31,False,~5.0,DPU Inline (Thesis Chapter 10ss),N/A
+D_VcLLM,Sparsity -> LUT 2-bit -> NVDEC hardware,10.0,81.00,1,2892.86,73636.36,400.00,81000.00,0.01,False,~5.0,"VcLLM (Xu et al., 2024)",2407.00467

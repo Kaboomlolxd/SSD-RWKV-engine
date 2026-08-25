@@ -1,0 +1,7 @@
+Metric,Value,Note
+baseline_bw_per_token_mb,35840.0,"All Q4, no gating"
+adaptive_bw_per_token_mb,29568.0,Token-adaptive Q2/Q4
+bw_savings_pct,17.5,Q2 fraction: 35.0%
+effective_compression,12.1x,Baseline: 10x
+tok_per_s_baseline,0.61,
+tok_per_s_adaptive,0.70,Speedup: 1.15x

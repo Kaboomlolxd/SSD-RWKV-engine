@@ -1,0 +1,9 @@
+Condition,Method,Avg_Latency_us,p99_Latency_us,p999_Latency_us,Max_Latency_us,Latency_Std_us,Uncorrectable_Errors,Mirror_Reads
+Fresh_Drive,Standard_LDPC,35714.29,35714.29,35714.29,35714.29,0.00,0,N/A
+Fresh_Drive,CRC_Mirror_Bypass,35714.79,35714.79,35714.79,35714.79,0.00,0,0
+Aged_Drive_2yr,Standard_LDPC,35714.29,35714.29,35714.29,35714.29,0.00,0,N/A
+Aged_Drive_2yr,CRC_Mirror_Bypass,35714.79,35714.79,35714.79,35714.79,0.00,0,0
+High_Temp_60C,Standard_LDPC,35714.29,35714.29,35714.29,35714.29,0.00,0,N/A
+High_Temp_60C,CRC_Mirror_Bypass,35714.79,35714.79,35714.79,35714.79,0.00,0,0
+Read_Disturb_Near_Limit,Standard_LDPC,35721.16,35858.79,36178.74,36214.29,55.76,0,N/A
+Read_Disturb_Near_Limit,CRC_Mirror_Bypass,36607.64,71429.07,71429.07,71429.07,5575.89,0,2

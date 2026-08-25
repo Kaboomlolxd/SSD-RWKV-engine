@@ -1,0 +1,3 @@
+Method,Kernel_Launches,Overhead_ms,Total_Verify_ms,Tok_s
+Dynamic Tree Verification,4,0.092,2.092,836.5200764818355
+Yggdrasil Static Runtime,1,0.002,2.002,874.1258741258741

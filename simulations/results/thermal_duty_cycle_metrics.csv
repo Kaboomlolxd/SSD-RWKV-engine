@@ -1,0 +1,5 @@
+Scenario,Compression_Ratio,Model_Payload_GB,Duty_Cycle_Pct,Steady_State_Temp_C,Peak_Temp_C,Throttle_Events,Effective_BW_GBs,Tok_Per_s,Speedup_vs_Baseline
+No_Compression_FP16,1.0,20.00,87.7,142.5,80.0,1,7.00,0.3070,1.00x
+LUT_Only_2bit,8.0,2.50,47.2,101.1,80.0,1,6.97,1.3184,4.29x
+LUT_plus_Sparsity,8.0,2.50,47.2,101.1,80.0,1,6.97,1.3184,4.29x
+Full_Trinity_ANS,10.0,2.00,41.7,95.5,80.0,1,6.98,1.4565,4.74x

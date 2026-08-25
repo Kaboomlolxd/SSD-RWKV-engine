@@ -1,0 +1,13 @@
+{
+  "resident_layer_ids": [
+    0,
+    1,
+    2,
+    3
+  ],
+  "always_resident_tensors": [
+    "embed",
+    "head",
+    "ln_out"
+  ]
+}

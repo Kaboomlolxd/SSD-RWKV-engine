@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "states": 8,
+  "state_payload_bytes": 262144,
+  "ram_cap_bytes": 524288,
+  "peak_observed_ram_bytes": 524288,
+  "disk_bytes": 2101064,
+  "median_write_ms": 2.117949989042245,
+  "median_restore_ms": 11.002900006133132,
+  "ram_evictions": 14,
+  "disk_hits": 8,
+  "exact_parity": true,
+  "scope": "synthetic CPU filesystem"
+}

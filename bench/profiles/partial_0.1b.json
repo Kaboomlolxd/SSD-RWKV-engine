@@ -1,0 +1,5 @@
+{
+  "description": "0.1B (12 layers): first/last blocks + globals resident; middle streams",
+  "resident_layer_ids": [0, 1, 10, 11],
+  "always_resident_tensors": ["embed", "head", "ln_out"]
+}

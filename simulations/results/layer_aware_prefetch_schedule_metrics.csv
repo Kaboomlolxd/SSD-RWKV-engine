@@ -1,0 +1,9 @@
+metric,value,note
+num_layers,80,
+layer_weight_mb_compressed,2.5600,
+ssd_bw_gbs,22.0,
+lookahead_layers,3,
+total_ms_naive_50_tokens,454.5455,
+total_ms_global_50_tokens,328.8636,
+speedup_global_vs_naive,1.3822,
+evidence_tier,Simulated / inspired,Abstract scheduler; not a measured runtime

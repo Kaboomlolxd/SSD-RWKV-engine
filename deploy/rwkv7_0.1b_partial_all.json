@@ -1,0 +1,5 @@
+{
+  "description": "0.1B RWKV-7 (12 layers): all block layers resident; no streaming I/O during decode",
+  "resident_layer_ids": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+  "always_resident_tensors": ["embed", "head", "ln_out"]
+}

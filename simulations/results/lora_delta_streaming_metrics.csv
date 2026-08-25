@@ -1,0 +1,3 @@
+Method,Num_Updates,Nominal_Writes_MB,Physical_Writes_MB,Write_Amplification,Write_Time_s,GC_Overhead_Pct,Effective_BW_GBs
+General_NS,100,400.0,4000.0,10.0,0.56,25.0,0.70
+ZNS_Delta_Log,100,400.0,720.0,1.80,0.20,0.0,1.98

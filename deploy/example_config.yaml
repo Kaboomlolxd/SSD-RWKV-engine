@@ -1,0 +1,44 @@
+pack_dir: ./runtime_pack
+
+checkpoint_path: ./model.pth
+
+# ChatRWKV is the CPU reference backend for this example. Use rwkvcpp only
+# after provisioning RWKVCPP_ROOT/RWKVCPP_DLL/RWKVCPP_GGML_PATH and running
+# rwkv-ssd-preflight.
+backend: chatrwkv
+
+mode: streaming
+
+device: cpu
+
+max_tokens: 32
+
+greedy: true
+
+strategy: cpu fp32
+
+verify_hash: true
+
+state_cache: true
+
+system_prefix: "SYSTEM:"
+
+progress: false
+
+io_backend: mmap
+
+io_chunk_bytes: 0
+
+io_chunk_policy: layer_size
+
+prefetch_policy: layer_aware
+
+prefetch_enabled: true
+
+stream_layer_cache: true
+
+mmap_willneed: true
+
+# Optional: deploy/partial_profile.example.json
+
+# residency_profile: deploy/rwkv7_0.1b_partial_hot7.json

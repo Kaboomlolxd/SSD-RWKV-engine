@@ -1,0 +1,180 @@
+{
+  "schema_version": 1,
+  "tensor_count": 12,
+  "activation_samples": 4,
+  "minimum_compression_ratio": 4.0,
+  "variants": [
+    {
+      "name": "global_kmeans",
+      "codebook": "kmeans",
+      "group_size": 0,
+      "encoded_bytes": 700656,
+      "dense_bytes": 5603328,
+      "max_abs": 12.078125,
+      "tensors": 12,
+      "weighted_rmse": 0.1172782106574658,
+      "activation_output_rmse": 2.4095231212041686,
+      "compression_ratio": 7.9972597108995,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_g64",
+      "codebook": "groupwise_kmeans",
+      "group_size": 64,
+      "encoded_bytes": 1400928,
+      "dense_bytes": 5603328,
+      "max_abs": 4.8125,
+      "tensors": 12,
+      "weighted_rmse": 0.08214290667027056,
+      "activation_output_rmse": 1.7152144758978571,
+      "compression_ratio": 3.9997258959775235,
+      "gates": {
+        "min_compression_ratio": false,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": false
+    },
+    {
+      "name": "groupwise_kmeans_g128",
+      "codebook": "groupwise_kmeans",
+      "group_size": 128,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 7.3125,
+      "tensors": 12,
+      "weighted_rmse": 0.08990486207244205,
+      "activation_output_rmse": 1.8671345262349834,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_g256",
+      "codebook": "groupwise_kmeans",
+      "group_size": 256,
+      "encoded_bytes": 875616,
+      "dense_bytes": 5603328,
+      "max_abs": 7.75,
+      "tensors": 12,
+      "weighted_rmse": 0.09639289930054298,
+      "activation_output_rmse": 1.9797254602613639,
+      "compression_ratio": 6.399298322552352,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_fp16_g64",
+      "codebook": "groupwise_kmeans_fp16",
+      "group_size": 64,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 4.8125,
+      "tensors": 12,
+      "weighted_rmse": 0.08214296648463935,
+      "activation_output_rmse": 1.7150628552364193,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_fp16_g128",
+      "codebook": "groupwise_kmeans_fp16",
+      "group_size": 128,
+      "encoded_bytes": 875616,
+      "dense_bytes": 5603328,
+      "max_abs": 7.3125,
+      "tensors": 12,
+      "weighted_rmse": 0.08990485727962855,
+      "activation_output_rmse": 1.8681001321030497,
+      "compression_ratio": 6.399298322552352,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_fp16_g256",
+      "codebook": "groupwise_kmeans_fp16",
+      "group_size": 256,
+      "encoded_bytes": 788064,
+      "dense_bytes": 5603328,
+      "max_abs": 7.75,
+      "tensors": 12,
+      "weighted_rmse": 0.0963930909555997,
+      "activation_output_rmse": 1.9802783758210656,
+      "compression_ratio": 7.110244853209892,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_residual_g64",
+      "codebook": "groupwise_kmeans_residual",
+      "group_size": 64,
+      "encoded_bytes": 1400928,
+      "dense_bytes": 5603328,
+      "max_abs": 3.9375,
+      "tensors": 12,
+      "weighted_rmse": 0.06655356409996596,
+      "activation_output_rmse": 1.3970500790877398,
+      "compression_ratio": 3.9997258959775235,
+      "gates": {
+        "min_compression_ratio": false,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": false
+    },
+    {
+      "name": "groupwise_kmeans_residual_g128",
+      "codebook": "groupwise_kmeans_residual",
+      "group_size": 128,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 2.109375,
+      "tensors": 12,
+      "weighted_rmse": 0.07554895798358718,
+      "activation_output_rmse": 1.593349872137547,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_residual_g256",
+      "codebook": "groupwise_kmeans_residual",
+      "group_size": 256,
+      "encoded_bytes": 875616,
+      "dense_bytes": 5603328,
+      "max_abs": 2.71875,
+      "tensors": 12,
+      "weighted_rmse": 0.08358422656663961,
+      "activation_output_rmse": 1.7356209397173683,
+      "compression_ratio": 6.399298322552352,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    }
+  ],
+  "recommended_variant": "groupwise_kmeans_residual_g128",
+  "caveat": "Tensor/output probes require logit and recurrent-state gates before deployment."
+}

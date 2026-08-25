@@ -1,0 +1,51 @@
+[project]
+name = "rwkv-ssd"
+version = "0.6.16"
+description = "RWKV inference engine with SSD weight streaming"
+readme = "README.md"
+license = "PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+dependencies = [
+  "torch>=2.1.0",
+  "numpy>=1.24.0",
+  "safetensors>=0.4.0",
+  "pyyaml>=6.0",
+  "numba>=0.66.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+hf = ["huggingface_hub>=0.20.0"]
+
+[project.scripts]
+rwkv-ssd = "app.cli:main"
+rwkv-ssd-serve = "app.serve:main"
+rwkv-ssd-preflight = "rwkv_ssd.tools.preflight:main"
+rwkv-ssd-pack = "rwkv_ssd.tools.pack_runtime:main"
+
+[tool.setuptools.packages.find]
+include = ["rwkv_ssd*", "app*"]
+
+[tool.setuptools.package-data]
+rwkv_ssd = ["py.typed"]
+"rwkv_ssd.native" = ["*.c", "*.dll", "*.pyd", "*.so", "*.dylib"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+check_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+# Fast default (~5–15s): synthetic pack tests only.
+# Full suite: pytest -m ""   or: pytest -m "chatrwkv or slow or integration"
+addopts = ["-m", "not chatrwkv and not slow and not integration"]
+markers = [
+    "slow: long runs (32+ tokens, 100-token streaming)",
+    "chatrwkv: ChatRWKV + RWKV-7 checkpoint (loads .pth)",
+    "integration: subprocess / disk smoke",
+]

@@ -1,0 +1,5 @@
+{
+  "description": "2.9B RWKV-7 (32 layers): pin early blocks 0-2; last layer also resident via partial policy. Stream middle 3-30.",
+  "resident_layer_ids": [0, 1, 2],
+  "always_resident_tensors": ["embed", "head", "ln_out"]
+}

@@ -1,0 +1,6 @@
+Model,Size_GB,Optimal_Drives,Baseline_Power_W,Optimal_Power_W,Energy_Per_Token_J,HBM_Energy_J,SSD_HBM_Ratio,Energy_Reduction_Pct,Tok_Per_s
+Mamba_7B_2bit,1.8,1,26.0,6.7,2.35,350.0,0.01,44.4,2.833
+Mamba_13B_2bit,3.2,1,26.0,6.7,4.10,350.0,0.01,40.7,1.620
+Mamba_70B_2bit,17.5,4,26.0,26.0,26.73,350.0,0.08,-0.3,0.973
+Mamba_175B_2bit,43.8,4,26.0,26.0,61.50,350.0,0.18,-0.1,0.423
+Mamba_405B_2bit,101.0,4,26.0,26.0,132.86,350.0,0.38,-0.1,0.196

@@ -1,0 +1,66 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.10000000149011612,
+    "maximum_kl": 9.256611824035645,
+    "maximum_state_relative_l2": 1.4326076136435095
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 5.699831008911133,
+        "mean_abs": 4.667881488800049,
+        "max_abs": 24.515777587890625,
+        "relative_l2": 0.5761910762039464,
+        "cosine": 0.9286873821985531,
+        "top_k": 10,
+        "top_k_overlap": 0.10000000149011612,
+        "min_top_k_overlap": 0.10000000149011612,
+        "kl_candidate_to_reference": 9.256611824035645,
+        "max_kl_candidate_to_reference": 9.256611824035645
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.5049095153808594,
+        "mean_abs": 0.05768204480409622,
+        "max_abs": 78.21461486816406,
+        "relative_l2": 1.0744434275366006,
+        "cosine": 0.28828964847868505
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 4.080436706542969,
+        "mean_abs": 3.255200147628784,
+        "max_abs": 21.058040618896484,
+        "relative_l2": 0.25466426905044254,
+        "cosine": 0.970913256965948,
+        "top_k": 10,
+        "top_k_overlap": 0.20000000298023224,
+        "min_top_k_overlap": 0.20000000298023224,
+        "kl_candidate_to_reference": 6.5342020988464355,
+        "max_kl_candidate_to_reference": 6.5342020988464355
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.47159063816070557,
+        "mean_abs": 0.06851387023925781,
+        "max_abs": 57.401573181152344,
+        "relative_l2": 1.4326076136435095,
+        "cosine": 0.14663559514590366
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-lut2-fp16-g64"
+}

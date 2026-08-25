@@ -1,0 +1,30 @@
+Source,Model,Hardware,Batch,Tok_s,Notes
+vLLM PR #33168,Nemotron Nano V3 30B A3B FP8,B200 TP1,batch_64,7387,ISL/OSL 1024/1024
+vLLM PR #33168,Nemotron Nano V3 30B A3B FP8,B200 TP1,batch_256,15857,ISL/OSL 1024/1024
+vLLM PR #33168,Nemotron Nano V3 30B A3B FP8,B200 TP1,batch_512,19732,ISL/OSL 1024/1024
+vLLM PR #33168,Nemotron Nano V3 30B A3B FP8,B200 TP1,batch_1024_before,12346,ISL/OSL 1024/1024
+vLLM PR #33168,Nemotron Nano V3 30B A3B FP8,B200 TP1,batch_1024_after,18085,ISL/OSL 1024/1024
+Together AI Mamba-3 Blog,Mamba-3 SISO,H100-SXM 80GB,128,233.25740318906608,"Prefill+decode 512 tokens, 4.39s"
+Together AI Mamba-3 Blog,Mamba-3 SISO,H100-SXM 80GB,128,233.25740318906608,"Prefill+decode 1024 tokens, 8.78s"
+Together AI Mamba-3 Blog,Mamba-3 SISO,H100-SXM 80GB,128,233.12464428002275,"Prefill+decode 2048 tokens, 17.57s"
+Together AI Mamba-3 Blog,Mamba-3 SISO,H100-SXM 80GB,128,233.32383936200512,"Prefill+decode 4096 tokens, 35.11s"
+Together AI Mamba-3 Blog,Mamba-3 SISO,H100-SXM 80GB,128,233.0417466752009,"Prefill+decode 16384 tokens, 140.61s"
+Together AI Mamba-3 Blog,Mamba-3 MIMO,H100-SXM 80GB,128,216.03375527426158,"Prefill+decode 512 tokens, 4.74s"
+Together AI Mamba-3 Blog,Mamba-3 MIMO,H100-SXM 80GB,128,216.03375527426158,"Prefill+decode 1024 tokens, 9.48s"
+Together AI Mamba-3 Blog,Mamba-3 MIMO,H100-SXM 80GB,128,216.03375527426158,"Prefill+decode 2048 tokens, 18.96s"
+Together AI Mamba-3 Blog,Mamba-3 MIMO,H100-SXM 80GB,128,216.43328929986788,"Prefill+decode 4096 tokens, 37.85s"
+Together AI Mamba-3 Blog,Mamba-3 MIMO,H100-SXM 80GB,128,215.84875831631643,"Prefill+decode 16384 tokens, 151.81s"
+Together AI Mamba-3 Blog,Mamba-2,H100-SXM 80GB,128,219.74248927038627,"Prefill+decode 512 tokens, 4.66s"
+Together AI Mamba-3 Blog,Mamba-2,H100-SXM 80GB,128,219.74248927038627,"Prefill+decode 1024 tokens, 9.32s"
+Together AI Mamba-3 Blog,Mamba-2,H100-SXM 80GB,128,219.97851772287862,"Prefill+decode 2048 tokens, 18.62s"
+Together AI Mamba-3 Blog,Mamba-2,H100-SXM 80GB,128,220.0967221923697,"Prefill+decode 4096 tokens, 37.22s"
+Together AI Mamba-3 Blog,Mamba-2,H100-SXM 80GB,128,219.88994765803247,"Prefill+decode 16384 tokens, 149.02s"
+Together AI Mamba-3 Blog,Llama-3.2-1B,H100-SXM 80GB,128,230.1123595505618,"Prefill+decode 512 tokens, 4.45s"
+Together AI Mamba-3 Blog,Llama-3.2-1B,H100-SXM 80GB,128,213.33333333333334,"Prefill+decode 1024 tokens, 9.60s"
+Together AI Mamba-3 Blog,Llama-3.2-1B,H100-SXM 80GB,128,201.08001963672066,"Prefill+decode 2048 tokens, 20.37s"
+Together AI Mamba-3 Blog,Llama-3.2-1B,H100-SXM 80GB,128,139.69986357435198,"Prefill+decode 4096 tokens, 58.64s"
+Together AI Mamba-3 Blog,Llama-3.2-1B,H100-SXM 80GB,128,33.55657962109575,"Prefill+decode 16384 tokens, 976.50s"
+vLLM Issue #21029,Mamba2,Unknown,Unknown,2209.84,vLLM v0
+vLLM Issue #21029,Mamba2,Unknown,Unknown,1104.71,vLLM v1 (50% regression)
+Dutt et al. 2602.21144,Mamba (various),A6000/A100,N/A,1.6-2.1x,Tensor parallelism 2_gpu
+Dutt et al. 2602.21144,Mamba (various),A6000/A100,N/A,2.6-4.0x,Tensor parallelism 4_gpu

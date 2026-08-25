@@ -1,0 +1,164 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb,booktabs,microtype}
+\usepackage[hidelinks]{hyperref}
+
+\title{Honest Compression Accounting and Thermal Duty Cycle:\\Sustained Effective Bandwidth for Flash-Streamed Model Weights}
+\author{[Author Name]}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Compression is usually discussed as a pure bandwidth multiplier for SSD-backed inference. This paper argues that such accounting is often wrong in two ways: it incorrectly stacks incompatible storage gains, and it ignores the thermal consequences of reduced active duty cycle. We present a conservative compressed-weight path for SSD-native recurrent inference consisting of 2:4 structured sparsity at FP16, LUT-based 2-bit quantization, and ANS entropy coding via nvCOMP. The central correction is that sparsity should be counted primarily as a compute accelerator rather than an additional final storage win once the representation is packed to 2-bit indices. Under this accounting, a 256~MB FP16 layer compresses to 25.61~MB, yielding an end-to-end storage ratio of 10.0$\times$ rather than the inflated figures that arise from naive multiplication. The modeled GPU-path service time falls from 19.11~ms to 1.91~ms for a representative layer, a 9.34$\times$ reduction on the storage-critical path. We then show that the same compression ratio also reduces SSD active duty cycle and therefore improves thermal sustainability under an RC-style controller model. The result is not a claim of lossless model quality or production thermal validation; it is a corrected accounting framework that links bytes transferred, decode cost, and sustained flash behavior under one evidence model.
+\end{abstract}
+
+\section{Introduction}
+Low-bit compression is appealing for SSD-native inference because storage bandwidth, not parameter count alone, is the immediate bottleneck. However, compression papers and systems prototypes often overstate how much these gains stack. In particular, sparsity and quantization are frequently multiplied as though each independently reduces final storage, even when metadata and packed formats eliminate the expected additive savings.
+
+This paper makes a narrower and more useful contribution: it presents a conservative compressed-weight pipeline whose accounting is internally consistent and whose claims are explicitly bounded. The paper also argues that compression has a second systems benefit. By shortening the active read window, it reduces SSD duty cycle and can move the storage path into a more thermally sustainable regime.
+
+\section{Compression Pipeline}
+The proposed pipeline has three stages.
+
+\subsection{Stage 1: 2:4 Structured Sparsity at FP16}
+For each group of four FP16 values, dense storage requires 64 bits while a 2:4 sparse representation requires 36 bits: two retained 16-bit values plus 4 bits of metadata. This is a 1.78$\times$ reduction in FP16 form. The important correction is that this stage should not be treated as an additional final storage win once the pipeline moves to packed 2-bit indices. Its main role in this paper is compute-side acceleration on sparse tensor cores.
+
+\subsection{Stage 2: LUT-Based 2-Bit Quantization}
+The main storage reduction comes from 2-bit LUT quantization:
+\begin{equation}
+R_{\text{LUT}} = \frac{16}{2} = 8\times.
+\end{equation}
+This stage converts a representative 256~MB FP16 layer into approximately 32.02~MB of compressed payload plus a small codebook.
+
+\subsection{Stage 3: ANS Entropy Coding}
+The final stage applies ANS entropy coding using nvCOMP on CUDA cores. In the evaluated path, ANS provides an additional lossless 1.25$\times$ reduction:
+\begin{equation}
+R_{\text{ANS}} = 1.25\times.
+\end{equation}
+
+\subsection{Conservative End-to-End Accounting}
+The defended storage ratio is therefore
+\begin{equation}
+R_{\text{total}} = R_{\text{LUT}} \cdot R_{\text{ANS}} \approx 10\times.
+\end{equation}
+The key methodological point is that sparsity is not multiplied in again as extra final storage shrinkage. In this paper, sparsity improves compute and decode behavior, while quantization and entropy coding dominate the final byte count.
+
+\section{Evaluation Setup}
+Evaluation combines two components:
+\begin{itemize}
+    \item a compression/decompression model derived from the compressed-weight pipeline studied here, and
+    \item an illustrative thermal model that maps active duty cycle to steady-state controller temperature.
+\end{itemize}
+
+The paper separates three notions that are often conflated:
+\begin{enumerate}
+    \item \textbf{bitstream fidelity}: ANS is lossless with respect to the quantized representation,
+    \item \textbf{storage-side service time}: time to read and decode compressed weights,
+    \item \textbf{task-level model quality}: determined by quantization, not by entropy coding.
+\end{enumerate}
+
+\section{Compression Results}
+Table~\ref{tab:compression} summarizes the conservative accounting.
+
+\begin{table}[t]
+\centering
+\caption{Compression stages for a representative 256~MB FP16 layer.}
+\label{tab:compression}
+\begin{tabular}{lrrrrr}
+\toprule
+Stage & Payload (MB) & Cumulative Ratio & Read ms & GPU Decode ms & Total GPU ms \\
+\midrule
+Baseline FP16 & 256.00 & 1.00$\times$ & 17.86 & 1.25 & 19.11 \\
+2:4 Sparse FP16 & 144.00 & 1.78$\times$ & 10.04 & 0.70 & 10.75 \\
+2-bit LUT & 32.02 & 8.00$\times$ & 2.23 & 0.16 & 2.39 \\
+ANS + 2-bit LUT & 25.61 & 10.00$\times$ & 1.79 & 0.13 & 1.91 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The conservative path produces three useful takeaways.
+
+\paragraph{First, the final storage ratio is substantial without inflated arithmetic.}
+The end-to-end payload drops from 256~MB to 25.61~MB, yielding a defensible 10.0$\times$ storage ratio.
+
+\paragraph{Second, sparsity must be interpreted correctly.}
+At the FP16 stage, sparsity materially reduces bytes. After packed 2-bit quantization, however, the metadata cancels the expected extra storage savings. Its value remains real, but it belongs on the compute side.
+
+\paragraph{Third, the compressed path changes service time by nearly an order of magnitude.}
+The modeled storage-critical path falls from 19.11~ms to 1.91~ms on the GPU-oriented decode path, corresponding to a 9.34$\times$ speedup in this representative per-layer model.
+
+\section{Thermal Duty-Cycle Interpretation}
+Compression also changes how long the SSD remains active during each token cycle. We model this with a first-order RC thermal equation and a steady-state duty-cycle approximation:
+\begin{equation}
+T_{\text{steady}} = T_{\text{ambient}} + R_{\text{th}} \cdot \left(P_{\text{active}} D + P_{\text{idle}} (1-D)\right).
+\end{equation}
+
+Using illustrative parameters,
+\[
+T_{\text{ambient}} = 35^\circ\mathrm{C}, \quad
+R_{\text{th}} = 12^\circ\mathrm{C}/\mathrm{W}, \quad
+P_{\text{active}} = 10\ \mathrm{W}, \quad
+P_{\text{idle}} = 1.5\ \mathrm{W}, \quad
+D = 0.10,
+\]
+the steady-state estimate becomes
+\[
+T_{\text{steady}} = 63.2^\circ\mathrm{C}.
+\]
+
+This number should not be read as a calibrated measurement for a specific retail SSD. Its purpose is to demonstrate that compression changes more than bandwidth. By reducing active duty cycle, it can materially shift the operating regime away from sustained full-rate streaming.
+
+\section{Discussion}
+The contribution of this paper is methodological as much as numerical. Honest compression accounting prevents overclaiming and makes later system design easier to reason about. Once the final storage ratio is correctly bounded, subsequent papers can treat compression as one stage in a schedule rather than as a free multiplier that compounds with everything else.
+
+The thermal analysis contributes a second systems insight: compression can be justified not only because it multiplies effective bandwidth, but because it helps keep consumer flash in a more sustainable operating regime. This matters particularly for enthusiast and workstation deployments where airflow and controller headroom are limited.
+
+\section{Limitations}
+This paper is intentionally conservative.
+\begin{itemize}
+    \item It does not claim end-to-end quality preservation for the exact compressed recurrent stack.
+    \item It does not claim that ANS, LUT dequantization, and sparse expansion are fully free once fused into a production kernel.
+    \item Its thermal model is illustrative rather than drive-calibrated.
+    \item It does not compare every possible codec path, only the conservative path analyzed in this paper.
+\end{itemize}
+
+These limits are essential to the paper's credibility. The goal is to establish a defensible baseline, not to maximize headline compression.
+
+\section{Related Work}
+Low-bit inference and post-training quantization have advanced rapidly in recent years, including aggressive codebook-based approaches such as QuIP\# and AQLM~\cite{quip,aqlm}. NVIDIA's 2:4 structured sparsity path demonstrates that hardware-aware sparsity can materially alter compute cost even when it does not dominate final storage size~\cite{ampere}. nvCOMP provides a practical entropy-coding implementation path on CUDA hardware~\cite{nvcomp}, while more recent compressed-weight systems such as EntroLLM illustrate growing interest in entropy-aware LLM serving paths~\cite{entro}. What distinguishes this paper is not a claim to have invented these ingredients, but the conservative integration of their storage and thermal consequences under one accounting model.
+
+\section{Conclusion}
+Compression for SSD-native inference is only useful if the arithmetic is honest. In the pipeline presented here, the correct end-to-end storage ratio is approximately 10$\times$, not a much larger number produced by double counting. That correction matters because it stabilizes every downstream claim about bandwidth, decode cost, and thermal sustainability. The paper therefore contributes a conservative but practical foundation for compressed weight streaming on commodity flash.
+
+\begin{thebibliography}{99}
+
+\bibitem{ampere}
+NVIDIA.
+\newblock NVIDIA Ampere Architecture In-Depth.
+\newblock Technical report, 2020.
+
+\bibitem{quip}
+Jerry Tseng et al.
+\newblock QuIP\#: Even Better LLM Quantization with Hadamard Incoherence and Lattice Codebooks.
+\newblock 2024.
+
+\bibitem{aqlm}
+Vardan Egiazarian et al.
+\newblock AQLM: Extreme Compression of Language Models with Additive Quantization.
+\newblock 2024.
+
+\bibitem{nvcomp}
+NVIDIA.
+\newblock nvCOMP: High-Performance Lossless Data Compression on GPUs.
+\newblock Software library documentation.
+
+\bibitem{entro}
+Arnab Sanyal et al.
+\newblock Entropy-Coded Compression for Efficient LLM Inference.
+\newblock 2025.
+
+\end{thebibliography}
+
+\end{document}

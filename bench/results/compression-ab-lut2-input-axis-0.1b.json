@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "tensor_count": 12,
+  "activation_samples": 4,
+  "minimum_compression_ratio": 4.0,
+  "variants": [
+    {
+      "name": "global_kmeans",
+      "codebook": "kmeans",
+      "group_size": 0,
+      "encoded_bytes": 700656,
+      "dense_bytes": 5603328,
+      "max_abs": 12.078125,
+      "tensors": 12,
+      "weighted_rmse": 0.1172782106574658,
+      "activation_output_rmse": 2.4095231212041686,
+      "compression_ratio": 7.9972597108995,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_g64",
+      "codebook": "groupwise_kmeans",
+      "group_size": 64,
+      "encoded_bytes": 1400928,
+      "dense_bytes": 5603328,
+      "max_abs": 4.8125,
+      "tensors": 12,
+      "weighted_rmse": 0.08214290667027056,
+      "activation_output_rmse": 1.7152144758978571,
+      "compression_ratio": 3.9997258959775235,
+      "gates": {
+        "min_compression_ratio": false,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": false
+    },
+    {
+      "name": "groupwise_kmeans_g128",
+      "codebook": "groupwise_kmeans",
+      "group_size": 128,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 7.3125,
+      "tensors": 12,
+      "weighted_rmse": 0.08990486207244205,
+      "activation_output_rmse": 1.8671345262349834,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_input_fp16_g64",
+      "codebook": "groupwise_input_fp16",
+      "group_size": 64,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 6.0,
+      "tensors": 12,
+      "weighted_rmse": 0.08925627176897595,
+      "activation_output_rmse": 1.8242562266248739,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_input_fp16_g128",
+      "codebook": "groupwise_input_fp16",
+      "group_size": 128,
+      "encoded_bytes": 875616,
+      "dense_bytes": 5603328,
+      "max_abs": 7.09375,
+      "tensors": 12,
+      "weighted_rmse": 0.09603159091678892,
+      "activation_output_rmse": 1.9787364212442125,
+      "compression_ratio": 6.399298322552352,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_input_residual_g64",
+      "codebook": "groupwise_input_residual",
+      "group_size": 64,
+      "encoded_bytes": 1400928,
+      "dense_bytes": 5603328,
+      "max_abs": 3.0625,
+      "tensors": 12,
+      "weighted_rmse": 0.07275301319169551,
+      "activation_output_rmse": 1.5004457682222694,
+      "compression_ratio": 3.9997258959775235,
+      "gates": {
+        "min_compression_ratio": false,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": false
+    },
+    {
+      "name": "groupwise_input_residual_g128",
+      "codebook": "groupwise_input_residual",
+      "group_size": 128,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 2.921875,
+      "tensors": 12,
+      "weighted_rmse": 0.08188969455523702,
+      "activation_output_rmse": 1.7213127346271668,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_salient_g64",
+      "codebook": "groupwise_kmeans_salient",
+      "group_size": 64,
+      "encoded_bytes": 1400928,
+      "dense_bytes": 5603328,
+      "max_abs": 3.9375,
+      "tensors": 12,
+      "weighted_rmse": 0.06697696401915806,
+      "activation_output_rmse": 1.3881235430089414,
+      "compression_ratio": 3.9997258959775235,
+      "gates": {
+        "min_compression_ratio": false,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": false
+    },
+    {
+      "name": "groupwise_kmeans_salient_g128",
+      "codebook": "groupwise_kmeans_salient",
+      "group_size": 128,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 2.109375,
+      "tensors": 12,
+      "weighted_rmse": 0.07578348051881983,
+      "activation_output_rmse": 1.6015462894058723,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_symmetric_fp16_g64",
+      "codebook": "groupwise_symmetric_fp16",
+      "group_size": 64,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 6.21875,
+      "tensors": 12,
+      "weighted_rmse": 0.09475337101250436,
+      "activation_output_rmse": 1.9064297836068416,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_symmetric_fp16_g128",
+      "codebook": "groupwise_symmetric_fp16",
+      "group_size": 128,
+      "encoded_bytes": 875616,
+      "dense_bytes": 5603328,
+      "max_abs": 9.8125,
+      "tensors": 12,
+      "weighted_rmse": 0.10000749084609935,
+      "activation_output_rmse": 2.0154681140797126,
+      "compression_ratio": 6.399298322552352,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_fp16_g64",
+      "codebook": "groupwise_kmeans_fp16",
+      "group_size": 64,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 4.8125,
+      "tensors": 12,
+      "weighted_rmse": 0.08214296648463935,
+      "activation_output_rmse": 1.7150628552364193,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_fp16_g128",
+      "codebook": "groupwise_kmeans_fp16",
+      "group_size": 128,
+      "encoded_bytes": 875616,
+      "dense_bytes": 5603328,
+      "max_abs": 7.3125,
+      "tensors": 12,
+      "weighted_rmse": 0.08990485727962855,
+      "activation_output_rmse": 1.8681001321030497,
+      "compression_ratio": 6.399298322552352,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    },
+    {
+      "name": "groupwise_kmeans_residual_g64",
+      "codebook": "groupwise_kmeans_residual",
+      "group_size": 64,
+      "encoded_bytes": 1400928,
+      "dense_bytes": 5603328,
+      "max_abs": 3.9375,
+      "tensors": 12,
+      "weighted_rmse": 0.06655356409996596,
+      "activation_output_rmse": 1.3970500790877398,
+      "compression_ratio": 3.9997258959775235,
+      "gates": {
+        "min_compression_ratio": false,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": false
+    },
+    {
+      "name": "groupwise_kmeans_residual_g128",
+      "codebook": "groupwise_kmeans_residual",
+      "group_size": 128,
+      "encoded_bytes": 1050720,
+      "dense_bytes": 5603328,
+      "max_abs": 2.109375,
+      "tensors": 12,
+      "weighted_rmse": 0.07554895798358718,
+      "activation_output_rmse": 1.593349872137547,
+      "compression_ratio": 5.332846048423938,
+      "gates": {
+        "min_compression_ratio": true,
+        "improves_weighted_rmse_vs_global": true
+      },
+      "passed": true
+    }
+  ],
+  "recommended_variant": "groupwise_kmeans_residual_g128",
+  "caveat": "Tensor/output probes require logit and recurrent-state gates before deployment."
+}

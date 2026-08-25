@@ -1,0 +1,3 @@
+architecture,write_volume_gb,ssd_wear_relative
+In-Place Update (128MB/tok),125.0,1.0
+Delta Logging + Compaction,3.33984375,0.02671875

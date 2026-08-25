@@ -1,0 +1,3 @@
+Approach,Active_Planes,Layer_Read_ms,Total_Streaming_ms,Eff_BW_GBps
+Standard Sequential,8,3571.4285714285716,2000.0,7.0
+Plane-Parallel Striped,128,5208.333333333334,1715.6862745098038,8.16

@@ -1,0 +1,5 @@
+{
+  "description": "0.01B bench (2 block layers): keep both blocks + globals resident",
+  "resident_layer_ids": [0, 1],
+  "always_resident_tensors": ["embed", "head", "ln_out"]
+}

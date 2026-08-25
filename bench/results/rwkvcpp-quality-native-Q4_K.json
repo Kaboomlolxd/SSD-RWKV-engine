@@ -1,0 +1,66 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.20000000298023224,
+    "maximum_kl": 1.9004762172698975,
+    "maximum_state_relative_l2": 0.2404990335304521
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 2.137960195541382,
+        "mean_abs": 1.6856032609939575,
+        "max_abs": 11.245277404785156,
+        "relative_l2": 0.21612449619354807,
+        "cosine": 0.976801455628164,
+        "top_k": 10,
+        "top_k_overlap": 0.20000000298023224,
+        "min_top_k_overlap": 0.20000000298023224,
+        "kl_candidate_to_reference": 1.9004762172698975,
+        "max_kl_candidate_to_reference": 1.9004762172698975
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.11301625519990921,
+        "mean_abs": 0.013418080285191536,
+        "max_abs": 19.289873123168945,
+        "relative_l2": 0.2404990335304521,
+        "cosine": 0.9708859497962042
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 0.9661110043525696,
+        "mean_abs": 0.7699521780014038,
+        "max_abs": 4.670351028442383,
+        "relative_l2": 0.06029598184217587,
+        "cosine": 0.9987746160324712,
+        "top_k": 10,
+        "top_k_overlap": 0.800000011920929,
+        "min_top_k_overlap": 0.800000011920929,
+        "kl_candidate_to_reference": 0.2155657708644867,
+        "max_kl_candidate_to_reference": 0.2155657708644867
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.07148877531290054,
+        "mean_abs": 0.013894885778427124,
+        "max_abs": 5.042446136474609,
+        "relative_l2": 0.21717159934871502,
+        "cosine": 0.9762151431295667
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_checkpoint": ".pytest-tmp\\rwkv7-g1d-0.1b-Q4_K.bin"
+}

@@ -1,0 +1,68 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.0,
+    "maximum_kl": 7.311482906341553,
+    "maximum_state_relative_l2": 1.214452706295418
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 12.465019226074219,
+        "mean_abs": 11.822279930114746,
+        "max_abs": 26.834991455078125,
+        "relative_l2": 1.2600782258724588,
+        "cosine": 0.9510114750017904,
+        "top_k": 10,
+        "top_k_overlap": 0.10000000149011612,
+        "min_top_k_overlap": 0.10000000149011612,
+        "kl_candidate_to_reference": 6.709833145141602,
+        "max_kl_candidate_to_reference": 6.709833145141602
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.5262158513069153,
+        "mean_abs": 0.05660606920719147,
+        "max_abs": 97.45307159423828,
+        "relative_l2": 1.1197795218704902,
+        "cosine": 0.17827957258660995
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 4.075830459594727,
+        "mean_abs": 3.2108147144317627,
+        "max_abs": 18.457015991210938,
+        "relative_l2": 0.25437675866126164,
+        "cosine": 0.9758190260465401,
+        "top_k": 10,
+        "top_k_overlap": 0.0,
+        "min_top_k_overlap": 0.0,
+        "kl_candidate_to_reference": 7.311482906341553,
+        "max_kl_candidate_to_reference": 7.311482906341553
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.3997766971588135,
+        "mean_abs": 0.06438854336738586,
+        "max_abs": 51.345420837402344,
+        "relative_l2": 1.214452706295418,
+        "cosine": 0.3285085076401455
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-lut2-activation-g128",
+  "native_upload_scope": "block_layers_only",
+  "resident_native_tensors": "embedding, head, and non-block tensors remain from the ggml checkpoint"
+}

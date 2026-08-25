@@ -1,0 +1,9 @@
+Architecture,Batch_Size,PCIe_Payload_MB,PCIe_Transfer_ms,Compute_ms,Total_Time_ms,Tok_sec_Mean,Tok_sec_StdDev
+Standard_GPU_Offload,1,256,18.29,72.37,72.37,0.90,0.06
+CSD_In_Situ,1,4,0.29,75.85,76.42,0.77,0.04
+Standard_GPU_Offload,16,256,18.29,75.19,75.19,13.20,0.91
+CSD_In_Situ,16,64,4.57,106.54,115.68,9.32,0.56
+Standard_GPU_Offload,64,256,18.29,103.35,103.35,41.18,2.19
+CSD_In_Situ,64,256,18.29,115.72,152.29,26.66,0.46
+Standard_GPU_Offload,256,256,18.29,145.01,145.01,99.68,14.78
+CSD_In_Situ,256,1024,73.14,184.93,331.21,48.06,2.12

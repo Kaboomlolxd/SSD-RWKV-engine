@@ -1,0 +1,4 @@
+Policy,Cache_Capacity,Hit_Rate,Avg_Miss_Cost,Weighted_Miss_Cost,BW_Per_Token_GB,Tok_Per_s
+No_Cache,0,0.0000,0.7655,93748.8,1.6744,2.1749
+LRU,18,0.0000,0.7655,93746.8,1.6744,2.1749
+UCB1_Bandit,18,0.0274,0.7607,90603.7,1.6285,2.1826

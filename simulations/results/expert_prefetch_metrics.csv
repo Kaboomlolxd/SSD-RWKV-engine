@@ -1,0 +1,11 @@
+Method,Experts_Per_Layer,Read_Time_ms,Token_Time_ms,Tok_Per_s,Speedup,BW_Per_Token_GB,Note
+No_Prefetch_Read_All,128,2285.7,2585.7,0.387,1.00x,64.00,Baseline
+Oracle_Read_Active_Only,2,35.7,335.7,2.979,7.7x,1.00,Oracle lower bound
+Hidden_State_Prefetch_acc0,4.5,106.6,456.6,2.190,5.7x,2.98,hit_rate=0.496
+Hidden_State_Prefetch_acc1,4.0,103.1,453.1,2.207,5.7x,2.89,hit_rate=0.599
+Hidden_State_Prefetch_acc1,3.5,99.6,449.6,2.224,5.8x,2.79,hit_rate=0.700
+Hidden_State_Prefetch_acc1,3.2,97.8,447.8,2.233,5.8x,2.74,hit_rate=0.753
+Hidden_State_Prefetch_acc1,3.0,96.2,446.2,2.241,5.8x,2.69,hit_rate=0.800
+Hidden_State_Prefetch_acc1,2.7,94.4,444.4,2.250,5.8x,2.64,hit_rate=0.852
+Hidden_State_Prefetch_acc1,2.5,92.7,442.7,2.259,5.8x,2.60,hit_rate=0.900
+Hidden_State_Prefetch_acc1,2.2,91.0,441.0,2.268,5.9x,2.55,hit_rate=0.950

@@ -1,0 +1,13 @@
+[package]
+name = "rwkv_storage_bench"
+version = "0.1.0"
+edition = "2021"
+description = "O_DIRECT + io_uring sequential read ceiling (Linux)"
+
+[[bin]]
+name = "rwkv_storage_bench"
+path = "src/main.rs"
+
+[dependencies]
+io-uring = "0.6"
+libc = "0.2"

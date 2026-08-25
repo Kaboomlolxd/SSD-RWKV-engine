@@ -1,0 +1,10 @@
+metric,value,note
+num_layers,80,
+layer_compressed_mb,2.560000,
+ssd_bw_gbs,22.0,
+time_per_layer_uniform_k16_s,0.00120164,
+time_per_layer_all_large_s,0.00154452,
+time_per_layer_hybrid_s,0.00125675,
+best_strategy,uniform_k16,
+full_model_io_speedup_vs_uniform,1.0000,uniform K=16 baseline
+evidence_tier,Simulated / new idea,Needs real FTL + device traces

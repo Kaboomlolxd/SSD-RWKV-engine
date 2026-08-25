@@ -1,0 +1,4002 @@
+{
+  "version": 1,
+  "lut_group_size": 128,
+  "u8_group_size": 64,
+  "extra_budget_bytes": 73400320,
+  "selected_extra_bytes": 67814784,
+  "selected_tensors": 398,
+  "candidate_tensors": 398,
+  "mandatory_suffixes": [
+    ".ffn.key.weight",
+    ".ffn.value.weight",
+    ".att.key.weight",
+    ".att.value.weight",
+    ".att.receptance.weight",
+    ".att.output.weight"
+  ],
+  "mandatory_selected": 72,
+  "codec_map": {
+    "blocks.11.ffn.key.weight": "scale_u8_grouped",
+    "blocks.10.ffn.key.weight": "scale_u8_grouped",
+    "blocks.9.ffn.key.weight": "scale_u8_grouped",
+    "blocks.8.ffn.key.weight": "scale_u8_grouped",
+    "blocks.7.ffn.key.weight": "scale_u8_grouped",
+    "blocks.6.ffn.key.weight": "scale_u8_grouped",
+    "blocks.1.ffn.key.weight": "scale_u8_grouped",
+    "blocks.5.ffn.key.weight": "scale_u8_grouped",
+    "blocks.4.ffn.key.weight": "scale_u8_grouped",
+    "blocks.3.ffn.key.weight": "scale_u8_grouped",
+    "blocks.2.ffn.key.weight": "scale_u8_grouped",
+    "blocks.10.att.receptance.weight": "scale_u8_grouped",
+    "blocks.10.att.key.weight": "scale_u8_grouped",
+    "blocks.11.att.key.weight": "scale_u8_grouped",
+    "blocks.11.att.receptance.weight": "scale_u8_grouped",
+    "blocks.10.att.value.weight": "scale_u8_grouped",
+    "blocks.0.ffn.key.weight": "scale_u8_grouped",
+    "blocks.9.att.key.weight": "scale_u8_grouped",
+    "blocks.11.att.value.weight": "scale_u8_grouped",
+    "blocks.8.att.receptance.weight": "scale_u8_grouped",
+    "blocks.8.att.value.weight": "scale_u8_grouped",
+    "blocks.8.att.key.weight": "scale_u8_grouped",
+    "blocks.5.att.receptance.weight": "scale_u8_grouped",
+    "blocks.9.att.receptance.weight": "scale_u8_grouped",
+    "blocks.4.att.value.weight": "scale_u8_grouped",
+    "blocks.11.att.output.weight": "scale_u8_grouped",
+    "blocks.6.att.receptance.weight": "scale_u8_grouped",
+    "blocks.7.att.receptance.weight": "scale_u8_grouped",
+    "blocks.7.att.value.weight": "scale_u8_grouped",
+    "blocks.5.att.key.weight": "scale_u8_grouped",
+    "blocks.6.att.value.weight": "scale_u8_grouped",
+    "blocks.1.att.value.weight": "scale_u8_grouped",
+    "blocks.5.att.value.weight": "scale_u8_grouped",
+    "blocks.3.att.value.weight": "scale_u8_grouped",
+    "blocks.7.att.key.weight": "scale_u8_grouped",
+    "blocks.6.att.key.weight": "scale_u8_grouped",
+    "blocks.4.att.receptance.weight": "scale_u8_grouped",
+    "blocks.9.att.output.weight": "scale_u8_grouped",
+    "blocks.2.att.receptance.weight": "scale_u8_grouped",
+    "blocks.3.att.receptance.weight": "scale_u8_grouped",
+    "blocks.1.att.receptance.weight": "scale_u8_grouped",
+    "blocks.2.att.value.weight": "scale_u8_grouped",
+    "blocks.10.att.output.weight": "scale_u8_grouped",
+    "blocks.2.att.key.weight": "scale_u8_grouped",
+    "blocks.1.att.key.weight": "scale_u8_grouped",
+    "blocks.4.att.key.weight": "scale_u8_grouped",
+    "blocks.3.att.key.weight": "scale_u8_grouped",
+    "blocks.9.att.value.weight": "scale_u8_grouped",
+    "blocks.11.ffn.value.weight": "scale_u8_grouped",
+    "blocks.10.ffn.value.weight": "scale_u8_grouped",
+    "blocks.9.ffn.value.weight": "scale_u8_grouped",
+    "blocks.8.ffn.value.weight": "scale_u8_grouped",
+    "blocks.8.att.output.weight": "scale_u8_grouped",
+    "blocks.7.ffn.value.weight": "scale_u8_grouped",
+    "blocks.0.att.key.weight": "scale_u8_grouped",
+    "blocks.6.ffn.value.weight": "scale_u8_grouped",
+    "blocks.0.att.receptance.weight": "scale_u8_grouped",
+    "blocks.7.att.output.weight": "scale_u8_grouped",
+    "blocks.5.att.output.weight": "scale_u8_grouped",
+    "blocks.5.ffn.value.weight": "scale_u8_grouped",
+    "blocks.6.att.output.weight": "scale_u8_grouped",
+    "blocks.4.ffn.value.weight": "scale_u8_grouped",
+    "blocks.0.att.value.weight": "scale_u8_grouped",
+    "blocks.3.ffn.value.weight": "scale_u8_grouped",
+    "blocks.4.att.output.weight": "scale_u8_grouped",
+    "blocks.2.att.output.weight": "scale_u8_grouped",
+    "blocks.3.att.output.weight": "scale_u8_grouped",
+    "blocks.2.ffn.value.weight": "scale_u8_grouped",
+    "blocks.0.att.output.weight": "scale_u8_grouped",
+    "blocks.1.att.output.weight": "scale_u8_grouped",
+    "blocks.1.ffn.value.weight": "scale_u8_grouped",
+    "blocks.0.ffn.value.weight": "scale_u8_grouped",
+    "blocks.9.att.r_k": "scale_u8_grouped",
+    "blocks.0.att.r_k": "scale_u8_grouped",
+    "blocks.11.att.r_k": "scale_u8_grouped",
+    "blocks.10.att.r_k": "scale_u8_grouped",
+    "blocks.7.att.r_k": "scale_u8_grouped",
+    "blocks.8.att.r_k": "scale_u8_grouped",
+    "blocks.8.att.w0": "scale_u8_grouped",
+    "blocks.7.att.w0": "scale_u8_grouped",
+    "blocks.5.att.w0": "scale_u8_grouped",
+    "blocks.10.att.w0": "scale_u8_grouped",
+    "blocks.0.ln2.weight": "scale_u8_grouped",
+    "blocks.6.att.r_k": "scale_u8_grouped",
+    "blocks.0.att.a2": "scale_u8_grouped",
+    "blocks.0.att.w0": "scale_u8_grouped",
+    "blocks.11.att.w0": "scale_u8_grouped",
+    "blocks.6.att.w0": "scale_u8_grouped",
+    "blocks.9.att.w0": "scale_u8_grouped",
+    "blocks.5.att.r_k": "scale_u8_grouped",
+    "blocks.2.att.w0": "scale_u8_grouped",
+    "blocks.2.att.r_k": "scale_u8_grouped",
+    "blocks.10.att.k_a": "scale_u8_grouped",
+    "blocks.1.att.v2": "scale_u8_grouped",
+    "blocks.11.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.2.att.k_k": "scale_u8_grouped",
+    "blocks.0.att.x_k": "scale_u8_grouped",
+    "blocks.0.att.k_k": "scale_u8_grouped",
+    "blocks.10.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.4.att.v2": "scale_u8_grouped",
+    "blocks.1.att.w0": "scale_u8_grouped",
+    "blocks.9.att.v2": "scale_u8_grouped",
+    "blocks.3.att.w0": "scale_u8_grouped",
+    "blocks.4.att.v0": "scale_u8_grouped",
+    "blocks.7.att.v2": "scale_u8_grouped",
+    "blocks.9.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.4.att.r_k": "scale_u8_grouped",
+    "blocks.4.att.w0": "scale_u8_grouped",
+    "blocks.9.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.2.att.a2": "scale_u8_grouped",
+    "blocks.3.att.v0": "scale_u8_grouped",
+    "blocks.3.att.v2": "scale_u8_grouped",
+    "blocks.8.att.v0": "scale_u8_grouped",
+    "blocks.8.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.6.att.v2": "scale_u8_grouped",
+    "blocks.1.ln2.weight": "scale_u8_grouped",
+    "blocks.7.att.k_k": "scale_u8_grouped",
+    "blocks.10.att.v0": "scale_u8_grouped",
+    "blocks.11.att.v2": "scale_u8_grouped",
+    "blocks.1.att.v0": "scale_u8_grouped",
+    "blocks.2.att.v2": "scale_u8_grouped",
+    "blocks.2.att.w2": "scale_u8_grouped",
+    "blocks.10.att.k_k": "scale_u8_grouped",
+    "blocks.8.att.k_a": "scale_u8_grouped",
+    "blocks.5.att.k_k": "scale_u8_grouped",
+    "blocks.6.att.v0": "scale_u8_grouped",
+    "blocks.1.att.r_k": "scale_u8_grouped",
+    "blocks.8.ln2.bias": "scale_u8_grouped",
+    "blocks.9.ln2.bias": "scale_u8_grouped",
+    "blocks.7.att.v0": "scale_u8_grouped",
+    "blocks.11.att.w2": "scale_u8_grouped",
+    "blocks.2.att.v0": "scale_u8_grouped",
+    "blocks.10.att.v2": "scale_u8_grouped",
+    "blocks.0.ffn.x_k": "scale_u8_grouped",
+    "blocks.0.att.w2": "scale_u8_grouped",
+    "blocks.11.att.v0": "scale_u8_grouped",
+    "blocks.10.att.w2": "scale_u8_grouped",
+    "blocks.3.att.r_k": "scale_u8_grouped",
+    "blocks.0.att.x_a": "scale_u8_grouped",
+    "blocks.9.att.w2": "scale_u8_grouped",
+    "blocks.8.att.k_k": "scale_u8_grouped",
+    "blocks.6.ln2.bias": "scale_u8_grouped",
+    "blocks.8.att.v2": "scale_u8_grouped",
+    "blocks.5.att.v0": "scale_u8_grouped",
+    "blocks.9.att.k_k": "scale_u8_grouped",
+    "blocks.1.ln2.bias": "scale_u8_grouped",
+    "blocks.10.att.a2": "scale_u8_grouped",
+    "blocks.8.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.7.ln2.bias": "scale_u8_grouped",
+    "blocks.1.att.a2": "scale_u8_grouped",
+    "blocks.0.ln2.bias": "scale_u8_grouped",
+    "blocks.7.att.a0": "scale_u8_grouped",
+    "blocks.4.ln2.bias": "scale_u8_grouped",
+    "blocks.1.att.w2": "scale_u8_grouped",
+    "blocks.4.att.k_k": "scale_u8_grouped",
+    "blocks.1.att.k_k": "scale_u8_grouped",
+    "blocks.0.att.k_a": "scale_u8_grouped",
+    "blocks.7.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.8.att.a0": "scale_u8_grouped",
+    "blocks.11.att.a0": "scale_u8_grouped",
+    "blocks.5.att.v2": "scale_u8_grouped",
+    "blocks.11.att.k_k": "scale_u8_grouped",
+    "blocks.4.att.w2": "scale_u8_grouped",
+    "blocks.6.att.w2": "scale_u8_grouped",
+    "blocks.8.att.w2": "scale_u8_grouped",
+    "blocks.10.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.9.att.a0": "scale_u8_grouped",
+    "blocks.11.ln2.bias": "scale_u8_grouped",
+    "blocks.2.ln2.bias": "scale_u8_grouped",
+    "blocks.11.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.2.att.a0": "scale_u8_grouped",
+    "blocks.7.att.w2": "scale_u8_grouped",
+    "blocks.5.ln2.bias": "scale_u8_grouped",
+    "blocks.3.ln2.bias": "scale_u8_grouped",
+    "blocks.10.att.a0": "scale_u8_grouped",
+    "blocks.7.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.6.att.k_k": "scale_u8_grouped",
+    "blocks.9.att.v0": "scale_u8_grouped",
+    "blocks.5.att.a0": "scale_u8_grouped",
+    "blocks.6.att.a0": "scale_u8_grouped",
+    "blocks.3.att.w2": "scale_u8_grouped",
+    "blocks.6.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.11.ln2.weight": "scale_u8_grouped",
+    "blocks.5.att.w2": "scale_u8_grouped",
+    "blocks.7.att.k_a": "scale_u8_grouped",
+    "blocks.9.ln2.weight": "scale_u8_grouped",
+    "blocks.0.att.x_w": "scale_u8_grouped",
+    "blocks.2.ln2.weight": "scale_u8_grouped",
+    "blocks.8.ln2.weight": "scale_u8_grouped",
+    "blocks.0.att.a0": "scale_u8_grouped",
+    "blocks.11.att.a2": "scale_u8_grouped",
+    "blocks.3.att.k_k": "scale_u8_grouped",
+    "blocks.10.ln2.weight": "scale_u8_grouped",
+    "blocks.10.ln2.bias": "scale_u8_grouped",
+    "blocks.5.att.a2": "scale_u8_grouped",
+    "blocks.1.ffn.x_k": "scale_u8_grouped",
+    "blocks.0.att.x_r": "scale_u8_grouped",
+    "blocks.6.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.5.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.0.att.x_g": "scale_u8_grouped",
+    "blocks.3.ln2.weight": "scale_u8_grouped",
+    "blocks.4.att.a0": "scale_u8_grouped",
+    "blocks.7.att.a2": "scale_u8_grouped",
+    "blocks.3.att.a0": "scale_u8_grouped",
+    "blocks.6.att.a2": "scale_u8_grouped",
+    "blocks.3.att.a2": "scale_u8_grouped",
+    "blocks.5.att.k_a": "scale_u8_grouped",
+    "blocks.4.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.8.att.a2": "scale_u8_grouped",
+    "blocks.5.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.9.att.a2": "scale_u8_grouped",
+    "blocks.7.ln2.weight": "scale_u8_grouped",
+    "blocks.1.att.a0": "scale_u8_grouped",
+    "blocks.4.att.a2": "scale_u8_grouped",
+    "blocks.5.ln2.weight": "scale_u8_grouped",
+    "blocks.9.att.x_w": "scale_u8_grouped",
+    "blocks.1.ln1.weight": "scale_u8_grouped",
+    "blocks.6.ln2.weight": "scale_u8_grouped",
+    "blocks.4.ln2.weight": "scale_u8_grouped",
+    "blocks.3.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.4.att.x_v": "scale_u8_grouped",
+    "blocks.6.att.x_a": "scale_u8_grouped",
+    "blocks.9.att.x_a": "scale_u8_grouped",
+    "blocks.4.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.11.att.k_a": "scale_u8_grouped",
+    "blocks.2.ffn.x_k": "scale_u8_grouped",
+    "blocks.2.att.x_k": "scale_u8_grouped",
+    "blocks.0.att.g2": "scale_u8_grouped",
+    "blocks.4.att.x_a": "scale_u8_grouped",
+    "blocks.7.att.x_w": "scale_u8_grouped",
+    "blocks.3.att.x_v": "scale_u8_grouped",
+    "blocks.0.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.7.att.x_a": "scale_u8_grouped",
+    "blocks.2.att.x_v": "scale_u8_grouped",
+    "blocks.10.att.x_w": "scale_u8_grouped",
+    "blocks.4.att.k_a": "scale_u8_grouped",
+    "blocks.9.att.x_k": "scale_u8_grouped",
+    "blocks.2.ln1.weight": "scale_u8_grouped",
+    "blocks.3.att.x_w": "scale_u8_grouped",
+    "blocks.1.att.x_a": "scale_u8_grouped",
+    "blocks.7.att.x_k": "scale_u8_grouped",
+    "blocks.10.ln1.bias": "scale_u8_grouped",
+    "blocks.9.ln1.weight": "scale_u8_grouped",
+    "blocks.0.ln1.weight": "scale_u8_grouped",
+    "blocks.1.att.x_v": "scale_u8_grouped",
+    "blocks.9.att.k_a": "scale_u8_grouped",
+    "blocks.8.att.x_w": "scale_u8_grouped",
+    "blocks.1.ln1.bias": "scale_u8_grouped",
+    "blocks.2.att.x_a": "scale_u8_grouped",
+    "blocks.1.att.x_w": "scale_u8_grouped",
+    "blocks.6.att.k_a": "scale_u8_grouped",
+    "blocks.3.att.x_a": "scale_u8_grouped",
+    "blocks.5.ln1.bias": "scale_u8_grouped",
+    "blocks.4.att.x_w": "scale_u8_grouped",
+    "blocks.2.att.x_r": "scale_u8_grouped",
+    "blocks.3.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.6.att.x_w": "scale_u8_grouped",
+    "blocks.2.att.x_w": "scale_u8_grouped",
+    "blocks.11.att.x_w": "scale_u8_grouped",
+    "blocks.5.ln1.weight": "scale_u8_grouped",
+    "blocks.5.att.x_w": "scale_u8_grouped",
+    "blocks.11.ln1.bias": "scale_u8_grouped",
+    "blocks.7.ln1.bias": "scale_u8_grouped",
+    "blocks.4.ln1.bias": "scale_u8_grouped",
+    "blocks.2.ln1.bias": "scale_u8_grouped",
+    "blocks.6.ln1.bias": "scale_u8_grouped",
+    "blocks.9.ln1.bias": "scale_u8_grouped",
+    "blocks.8.ln1.bias": "scale_u8_grouped",
+    "blocks.3.ln1.bias": "scale_u8_grouped",
+    "blocks.2.att.k_a": "scale_u8_grouped",
+    "blocks.0.att.x_v": "scale_u8_grouped",
+    "blocks.2.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.8.att.x_a": "scale_u8_grouped",
+    "blocks.9.att.g2": "scale_u8_grouped",
+    "blocks.4.ln1.weight": "scale_u8_grouped",
+    "blocks.9.att.x_v": "scale_u8_grouped",
+    "blocks.1.att.x_k": "scale_u8_grouped",
+    "blocks.8.ln1.weight": "scale_u8_grouped",
+    "blocks.3.ffn.x_k": "scale_u8_grouped",
+    "blocks.7.ln1.weight": "scale_u8_grouped",
+    "blocks.6.ln1.weight": "scale_u8_grouped",
+    "blocks.6.att.x_v": "scale_u8_grouped",
+    "blocks.3.ln1.weight": "scale_u8_grouped",
+    "blocks.4.ffn.x_k": "scale_u8_grouped",
+    "blocks.1.att.g2": "scale_u8_grouped",
+    "blocks.11.att.g2": "scale_u8_grouped",
+    "blocks.11.ln1.weight": "scale_u8_grouped",
+    "blocks.10.att.g2": "scale_u8_grouped",
+    "blocks.1.att.w1": "scale_u8_grouped",
+    "blocks.10.ln1.weight": "scale_u8_grouped",
+    "blocks.6.att.x_k": "scale_u8_grouped",
+    "blocks.3.att.k_a": "scale_u8_grouped",
+    "blocks.0.ln1.bias": "scale_u8_grouped",
+    "blocks.8.att.x_k": "scale_u8_grouped",
+    "blocks.2.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.5.att.x_a": "scale_u8_grouped",
+    "blocks.8.att.g2": "scale_u8_grouped",
+    "blocks.1.att.v1": "scale_u8_grouped",
+    "blocks.2.att.w1": "scale_u8_grouped",
+    "blocks.4.att.x_k": "scale_u8_grouped",
+    "blocks.5.att.x_k": "scale_u8_grouped",
+    "blocks.3.att.x_k": "scale_u8_grouped",
+    "blocks.10.att.x_a": "scale_u8_grouped",
+    "blocks.3.att.g2": "scale_u8_grouped",
+    "blocks.10.att.v1": "scale_u8_grouped",
+    "blocks.1.att.g1": "scale_u8_grouped",
+    "blocks.11.att.a1": "scale_u8_grouped",
+    "blocks.10.att.a1": "scale_u8_grouped",
+    "blocks.2.att.g2": "scale_u8_grouped",
+    "blocks.11.att.v1": "scale_u8_grouped",
+    "blocks.11.att.x_k": "scale_u8_grouped",
+    "blocks.7.att.g2": "scale_u8_grouped",
+    "blocks.1.att.a1": "scale_u8_grouped",
+    "blocks.6.att.g2": "scale_u8_grouped",
+    "blocks.4.att.g2": "scale_u8_grouped",
+    "blocks.5.att.g2": "scale_u8_grouped",
+    "blocks.3.att.w1": "scale_u8_grouped",
+    "blocks.1.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.4.att.v1": "scale_u8_grouped",
+    "blocks.11.att.w1": "scale_u8_grouped",
+    "blocks.8.att.v1": "scale_u8_grouped",
+    "blocks.2.att.v1": "scale_u8_grouped",
+    "blocks.5.att.x_r": "scale_u8_grouped",
+    "blocks.9.att.v1": "scale_u8_grouped",
+    "blocks.11.att.x_a": "scale_u8_grouped",
+    "blocks.2.att.x_g": "scale_u8_grouped",
+    "blocks.1.att.x_g": "scale_u8_grouped",
+    "blocks.3.att.v1": "scale_u8_grouped",
+    "blocks.0.att.ln_x.bias": "scale_u8_grouped",
+    "blocks.2.att.a1": "scale_u8_grouped",
+    "blocks.8.att.a1": "scale_u8_grouped",
+    "blocks.0.att.g1": "scale_u8_grouped",
+    "blocks.5.att.v1": "scale_u8_grouped",
+    "blocks.7.att.x_v": "scale_u8_grouped",
+    "blocks.4.att.x_g": "scale_u8_grouped",
+    "blocks.1.att.ln_x.weight": "scale_u8_grouped",
+    "blocks.4.att.w1": "scale_u8_grouped",
+    "blocks.9.att.a1": "scale_u8_grouped",
+    "blocks.7.att.v1": "scale_u8_grouped",
+    "blocks.10.att.w1": "scale_u8_grouped",
+    "blocks.6.att.v1": "scale_u8_grouped",
+    "blocks.1.att.k_a": "scale_u8_grouped",
+    "blocks.5.att.a1": "scale_u8_grouped",
+    "blocks.4.att.g1": "scale_u8_grouped",
+    "blocks.3.att.a1": "scale_u8_grouped",
+    "blocks.2.att.g1": "scale_u8_grouped",
+    "blocks.7.att.a1": "scale_u8_grouped",
+    "blocks.5.att.x_g": "scale_u8_grouped",
+    "blocks.0.att.a1": "scale_u8_grouped",
+    "blocks.6.att.a1": "scale_u8_grouped",
+    "blocks.7.att.x_r": "scale_u8_grouped",
+    "blocks.6.att.x_g": "scale_u8_grouped",
+    "blocks.4.att.a1": "scale_u8_grouped",
+    "blocks.5.att.x_v": "scale_u8_grouped",
+    "blocks.11.att.g1": "scale_u8_grouped",
+    "blocks.1.att.x_r": "scale_u8_grouped",
+    "blocks.6.att.x_r": "scale_u8_grouped",
+    "blocks.9.att.g1": "scale_u8_grouped",
+    "blocks.10.att.g1": "scale_u8_grouped",
+    "blocks.9.att.w1": "scale_u8_grouped",
+    "blocks.6.att.g1": "scale_u8_grouped",
+    "blocks.7.att.x_g": "scale_u8_grouped",
+    "blocks.0.att.w1": "scale_u8_grouped",
+    "blocks.3.att.g1": "scale_u8_grouped",
+    "blocks.4.att.x_r": "scale_u8_grouped",
+    "blocks.10.att.x_k": "scale_u8_grouped",
+    "blocks.6.att.w1": "scale_u8_grouped",
+    "blocks.6.ffn.x_k": "scale_u8_grouped",
+    "blocks.5.att.g1": "scale_u8_grouped",
+    "blocks.3.att.x_r": "scale_u8_grouped",
+    "blocks.8.att.x_v": "scale_u8_grouped",
+    "blocks.3.att.x_g": "scale_u8_grouped",
+    "blocks.5.ffn.x_k": "scale_u8_grouped",
+    "blocks.7.att.g1": "scale_u8_grouped",
+    "blocks.8.att.g1": "scale_u8_grouped",
+    "blocks.7.ffn.x_k": "scale_u8_grouped",
+    "blocks.8.att.x_r": "scale_u8_grouped",
+    "blocks.8.att.x_g": "scale_u8_grouped",
+    "blocks.5.att.w1": "scale_u8_grouped",
+    "blocks.8.att.w1": "scale_u8_grouped",
+    "blocks.9.att.x_r": "scale_u8_grouped",
+    "blocks.10.att.x_r": "scale_u8_grouped",
+    "blocks.10.att.x_g": "scale_u8_grouped",
+    "blocks.11.att.x_r": "scale_u8_grouped",
+    "blocks.7.att.w1": "scale_u8_grouped",
+    "blocks.9.att.x_g": "scale_u8_grouped",
+    "blocks.8.ffn.x_k": "scale_u8_grouped",
+    "blocks.11.att.x_g": "scale_u8_grouped",
+    "blocks.10.att.x_v": "scale_u8_grouped",
+    "blocks.0.ln0.bias": "scale_u8_grouped",
+    "blocks.11.att.x_v": "scale_u8_grouped",
+    "blocks.9.ffn.x_k": "scale_u8_grouped",
+    "blocks.0.ln0.weight": "scale_u8_grouped",
+    "blocks.10.ffn.x_k": "scale_u8_grouped",
+    "blocks.11.ffn.x_k": "scale_u8_grouped",
+    "blocks.0.att.v2": "scale_u8_grouped",
+    "blocks.0.att.v0": "scale_u8_grouped",
+    "blocks.0.att.v1": "scale_u8_grouped"
+  },
+  "ranking": [
+    {
+      "name": "blocks.9.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1233.9819607138634,
+      "benefit_per_byte": 2.142329792906013,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1125.8825734257698,
+      "benefit_per_byte": 1.9546572455308504,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 627.622673869133,
+      "benefit_per_byte": 1.089622697689467,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 250.73865440487862,
+      "benefit_per_byte": 0.4353101638973587,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 195.56740671396255,
+      "benefit_per_byte": 0.3395267477672961,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 154.1107782498002,
+      "benefit_per_byte": 0.2675534344614587,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 109.98803770169616,
+      "benefit_per_byte": 0.1909514543432225,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 108.18977343477309,
+      "benefit_per_byte": 0.18782946776870327,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 96.55752795934677,
+      "benefit_per_byte": 0.1676345971516437,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 93.49623809754848,
+      "benefit_per_byte": 0.1623198578082439,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 92.55861282348633,
+      "benefit_per_byte": 0.160692036151886,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 87.4304585903883,
+      "benefit_per_byte": 0.15178899060831302,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 5438.159536957741,
+      "benefit_per_byte": 0.14751951868917482,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 77.46429139003158,
+      "benefit_per_byte": 0.1344866169965826,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 66.87171124108136,
+      "benefit_per_byte": 0.11609672090465513,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 62.27730969246477,
+      "benefit_per_byte": 0.10812032932719579,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 55.37100790441036,
+      "benefit_per_byte": 0.09613022205626799,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 54.330185210332274,
+      "benefit_per_byte": 0.09432323821238242,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 52.838298451155424,
+      "benefit_per_byte": 0.09173315703325595,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 46.81625198666006,
+      "benefit_per_byte": 0.08127821525461816,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 42.698798179626465,
+      "benefit_per_byte": 0.0741298579507404,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 1351.1506543755531,
+      "benefit_per_byte": 0.07330461449520145,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 41.07093303464353,
+      "benefit_per_byte": 0.07130370318514502,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 40.37569063156843,
+      "benefit_per_byte": 0.07009668512425075,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 37.232760548591614,
+      "benefit_per_byte": 0.06464020928574933,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 36.83555829897523,
+      "benefit_per_byte": 0.063950622046832,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 36.67485556937754,
+      "benefit_per_byte": 0.06367162425239156,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 1137.110342502594,
+      "benefit_per_byte": 0.06169218438056608,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 34.621221125125885,
+      "benefit_per_byte": 0.06010628667556577,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 1107.8171770572662,
+      "benefit_per_byte": 0.06010292844277703,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 32.04420290887356,
+      "benefit_per_byte": 0.05563229671679437,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 31.70232147537172,
+      "benefit_per_byte": 0.055038752561409235,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 980.9936891198158,
+      "benefit_per_byte": 0.05322231386283723,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 29.56655520759523,
+      "benefit_per_byte": 0.051330825013186164,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 29.410263380035758,
+      "benefit_per_byte": 0.0510594850347843,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.w0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 29.16423749923706,
+      "benefit_per_byte": 0.050632356769508786,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 27.738200295716524,
+      "benefit_per_byte": 0.048156597735618964,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1752.0576874613762,
+      "benefit_per_byte": 0.04752760653920834,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 26.762441330589354,
+      "benefit_per_byte": 0.046462571754495405,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 844.0172972381115,
+      "benefit_per_byte": 0.04579086899078296,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 26.364480996504426,
+      "benefit_per_byte": 0.04577166839670907,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 26.062979102134705,
+      "benefit_per_byte": 0.045248227607872754,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 831.8897548466921,
+      "benefit_per_byte": 0.04513290770652626,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 25.838397979736328,
+      "benefit_per_byte": 0.044858329825931124,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 25.479041104204953,
+      "benefit_per_byte": 0.04423444636146693,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 25.466481373645365,
+      "benefit_per_byte": 0.04421264127368987,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 799.423816204071,
+      "benefit_per_byte": 0.04337151780621045,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 23.471323093399405,
+      "benefit_per_byte": 0.04074882481492952,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 735.3304412662983,
+      "benefit_per_byte": 0.03989422966939552,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1470.5619019269943,
+      "benefit_per_byte": 0.039891544648627236,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 22.719660331495106,
+      "benefit_per_byte": 0.039443854742179006,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 22.643077850341797,
+      "benefit_per_byte": 0.03931089904573229,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 22.40523547679186,
+      "benefit_per_byte": 0.0388979782583192,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 21.79512172518298,
+      "benefit_per_byte": 0.03783875299510934,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 21.644569873809814,
+      "benefit_per_byte": 0.03757737825314204,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 21.105431131552905,
+      "benefit_per_byte": 0.03664137349227935,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 20.992049051448703,
+      "benefit_per_byte": 0.036444529603209555,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 20.30717818811536,
+      "benefit_per_byte": 0.03525551768770027,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1287.6952417194843,
+      "benefit_per_byte": 0.03493096901365789,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 20.035578787326813,
+      "benefit_per_byte": 0.03478399095022016,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 639.6176727563143,
+      "benefit_per_byte": 0.03470147964172712,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 19.98397779185325,
+      "benefit_per_byte": 0.034694405888634115,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1274.9353217482567,
+      "benefit_per_byte": 0.034584834031799495,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 19.913117599207908,
+      "benefit_per_byte": 0.03457138472084706,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1222.3745559453964,
+      "benefit_per_byte": 0.03315903200806739,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.r_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 19.045599475502968,
+      "benefit_per_byte": 0.033065276867192656,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 18.903378009796143,
+      "benefit_per_byte": 0.03281836460034052,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1190.6133340895176,
+      "benefit_per_byte": 0.03229745372421652,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 18.316087539307773,
+      "benefit_per_byte": 0.031798763089076,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 18.257918575778604,
+      "benefit_per_byte": 0.031697775305171184,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 574.7746725678444,
+      "benefit_per_byte": 0.03118352173219642,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 17.904877139721066,
+      "benefit_per_byte": 0.031084856145349074,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 17.76221042405814,
+      "benefit_per_byte": 0.030837170875100937,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 17.40083303907886,
+      "benefit_per_byte": 0.030209779581734136,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1111.7138035297394,
+      "benefit_per_byte": 0.030157166979430865,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 17.174263138324022,
+      "benefit_per_byte": 0.029816429059590317,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 17.04973986092955,
+      "benefit_per_byte": 0.0296002428141138,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1088.2778136134148,
+      "benefit_per_byte": 0.029521425065468065,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 16.85535951051861,
+      "benefit_per_byte": 0.029262776927983698,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 16.72963215224445,
+      "benefit_per_byte": 0.02904450026431328,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 16.694234622642398,
+      "benefit_per_byte": 0.028983046219865274,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1054.6208117753267,
+      "benefit_per_byte": 0.02860842045831507,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 15.910799860954285,
+      "benefit_per_byte": 0.027622916425267856,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 15.842831756919622,
+      "benefit_per_byte": 0.027504916244652122,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 15.597522497177124,
+      "benefit_per_byte": 0.027079032113154728,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 15.42309289984405,
+      "benefit_per_byte": 0.02677620295111814,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 15.398291304707527,
+      "benefit_per_byte": 0.026733144626228347,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 15.049626397434622,
+      "benefit_per_byte": 0.02612782360665733,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 474.3955118358135,
+      "benefit_per_byte": 0.0257376037237312,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 14.63765528704971,
+      "benefit_per_byte": 0.025412595984461304,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 916.9390988945961,
+      "benefit_per_byte": 0.024873564965673722,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 912.4214196056128,
+      "benefit_per_byte": 0.02475101507176684,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 899.348904967308,
+      "benefit_per_byte": 0.02439640041686491,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 14.023014953359962,
+      "benefit_per_byte": 0.02434551207180549,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 13.823468560352921,
+      "benefit_per_byte": 0.02399907736172382,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 13.78037905972451,
+      "benefit_per_byte": 0.023924269200910606,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 13.780130663886666,
+      "benefit_per_byte": 0.023923837958136573,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 13.735377211123705,
+      "benefit_per_byte": 0.02384614099153421,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 13.709576467052102,
+      "benefit_per_byte": 0.023801348033076566,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 871.045343592763,
+      "benefit_per_byte": 0.02362861717645299,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 13.505555445328355,
+      "benefit_per_byte": 0.023447144870361727,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 12.840607481077313,
+      "benefit_per_byte": 0.022292721321314782,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 12.82311138883233,
+      "benefit_per_byte": 0.02226234616116724,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 12.513254091143608,
+      "benefit_per_byte": 0.021724399463790987,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 12.299863068386912,
+      "benefit_per_byte": 0.021353928938171722,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 11.9173327551689,
+      "benefit_per_byte": 0.02068981381105712,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 11.904575638938695,
+      "benefit_per_byte": 0.020667666039824124,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 11.901403124444187,
+      "benefit_per_byte": 0.020662158202160046,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 758.200905829668,
+      "benefit_per_byte": 0.02056751589164681,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 11.571176007390022,
+      "benefit_per_byte": 0.020088847235052124,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 11.44775390625,
+      "benefit_per_byte": 0.01987457275390625,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.w2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 725.4349241107702,
+      "benefit_per_byte": 0.01967868175213678,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 11.133293151855469,
+      "benefit_per_byte": 0.019328633944193523,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 10.53436279296875,
+      "benefit_per_byte": 0.018288824293348525,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 10.286211509257555,
+      "benefit_per_byte": 0.017858006092461035,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 10.186676979064941,
+      "benefit_per_byte": 0.017685203088654414,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 10.06494140625,
+      "benefit_per_byte": 0.017473856608072918,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 9.980444650165737,
+      "benefit_per_byte": 0.01732716085098218,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 633.7045534849167,
+      "benefit_per_byte": 0.017190336194794834,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.k_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 9.834310868754983,
+      "benefit_per_byte": 0.01707345636936629,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 9.65191650390625,
+      "benefit_per_byte": 0.01675679948594835,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.ln2.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 9.578476120717824,
+      "benefit_per_byte": 0.016629298820690665,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 553.2568784952164,
+      "benefit_per_byte": 0.015008053344596798,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 8.56885125883855,
+      "benefit_per_byte": 0.014876477879928037,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 7.884179942309856,
+      "benefit_per_byte": 0.013687812399843501,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 7.700864493846893,
+      "benefit_per_byte": 0.013369556412928633,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 7.557299221865833,
+      "benefit_per_byte": 0.013120311149072627,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 7.543374712346122,
+      "benefit_per_byte": 0.013096136653378684,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 7.258640289306641,
+      "benefit_per_byte": 0.012601806057824029,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 6.854751389473677,
+      "benefit_per_byte": 0.011900610051169578,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 434.6030377447605,
+      "benefit_per_byte": 0.01178936191798938,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 6.742056229850277,
+      "benefit_per_byte": 0.011704958732378954,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 427.97696763277054,
+      "benefit_per_byte": 0.011609618262607709,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 425.71156135201454,
+      "benefit_per_byte": 0.011548165184245186,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 6.601439937949181,
+      "benefit_per_byte": 0.011460833225606216,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 6.500189781188965,
+      "benefit_per_byte": 0.011285051703453064,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 392.3357236087322,
+      "benefit_per_byte": 0.010642787641295904,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.886495181825012,
+      "benefit_per_byte": 0.010219609690668423,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 372.8204956948757,
+      "benefit_per_byte": 0.010113403203528529,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.7546844482421875,
+      "benefit_per_byte": 0.009990771611531576,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.a0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.591131955385208,
+      "benefit_per_byte": 0.009706826311432652,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.a2",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 349.35444289445877,
+      "benefit_per_byte": 0.009476845781642219,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.4094390869140625,
+      "benefit_per_byte": 0.009391387303670248,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.323928309371695,
+      "benefit_per_byte": 0.009242931092659192,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.227153778076172,
+      "benefit_per_byte": 0.009074919753604464,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 5.0674896240234375,
+      "benefit_per_byte": 0.008797725041707357,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.ln2.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 4.7952423095703125,
+      "benefit_per_byte": 0.008325073454115126,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 4.620388335548341,
+      "benefit_per_byte": 0.008021507526993647,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 4.128744198242202,
+      "benefit_per_byte": 0.007167958677503823,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 4.109831606037915,
+      "benefit_per_byte": 0.007135124316038046,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.7439898983575404,
+      "benefit_per_byte": 0.006499982462426285,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.624564906815067,
+      "benefit_per_byte": 0.006292647407665047,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.614978790283203,
+      "benefit_per_byte": 0.006276004844241672,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.554756324039772,
+      "benefit_per_byte": 0.006171451951457938,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.260904481401667,
+      "benefit_per_byte": 0.00566129250243345,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 414.28078872710466,
+      "benefit_per_byte": 0.0056190428158515715,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.1822801684611477,
+      "benefit_per_byte": 0.005524791959133937,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.1798936349805444,
+      "benefit_per_byte": 0.005520648671841223,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.0499384542927146,
+      "benefit_per_byte": 0.0052950320387026295,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 3.034373443806544,
+      "benefit_per_byte": 0.005268009451053028,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.9909237646497786,
+      "benefit_per_byte": 0.005192575980294755,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.8163340156897902,
+      "benefit_per_byte": 0.004889468777239219,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.807392492191866,
+      "benefit_per_byte": 0.004873945298944212,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.784271240234375,
+      "benefit_per_byte": 0.004833804236518012,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.7563731061527506,
+      "benefit_per_byte": 0.004785369975959636,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.681201934814453,
+      "benefit_per_byte": 0.004654864470163981,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.61076607555151,
+      "benefit_per_byte": 0.0045325799922769265,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.5464777541928925,
+      "benefit_per_byte": 0.00442096832325155,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.4699896759120747,
+      "benefit_per_byte": 0.0042881765206806855,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.4537579512689263,
+      "benefit_per_byte": 0.004259996443175219,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.4451026916503906,
+      "benefit_per_byte": 0.004244969950781928,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.3489332012832165,
+      "benefit_per_byte": 0.0040780090300055844,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.32234903331846,
+      "benefit_per_byte": 0.0040318559606223265,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.2511749267578125,
+      "benefit_per_byte": 0.00390828980339898,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.2296980866231024,
+      "benefit_per_byte": 0.003871003622609553,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.2033885418786667,
+      "benefit_per_byte": 0.003825327329650463,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.156096490798518,
+      "benefit_per_byte": 0.0037432230743029826,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.154857963323593,
+      "benefit_per_byte": 0.0037410728529923493,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.146599531173706,
+      "benefit_per_byte": 0.003726735297176573,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.1245764538180083,
+      "benefit_per_byte": 0.0036885007878784868,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 2.054446349153295,
+      "benefit_per_byte": 0.003566747133946693,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.9840871691703796,
+      "benefit_per_byte": 0.003444595779809687,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.9489670642651618,
+      "benefit_per_byte": 0.0033836233754603504,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.871150913706515,
+      "benefit_per_byte": 0.0032485258918515886,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.8591168185230345,
+      "benefit_per_byte": 0.003227633365491379,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.8364534974098206,
+      "benefit_per_byte": 0.0031882873218920496,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.7638498455053195,
+      "benefit_per_byte": 0.003062239315113402,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.7497901916503906,
+      "benefit_per_byte": 0.003037830193837484,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.x_w",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.6429921088274568,
+      "benefit_per_byte": 0.0028524168556032237,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.5551236665342003,
+      "benefit_per_byte": 0.0026998674766218755,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.5221410253434442,
+      "benefit_per_byte": 0.002642605946776813,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.5135082527413033,
+      "benefit_per_byte": 0.0026276184943425404,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.4361138144158758,
+      "benefit_per_byte": 0.0024932531500275624,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.4137131243478507,
+      "benefit_per_byte": 0.0024543630631039073,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.40889238496311,
+      "benefit_per_byte": 0.0024459937238942883,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.3897855373797938,
+      "benefit_per_byte": 0.0024128221135065863,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.2882494753575884,
+      "benefit_per_byte": 0.0022365442280513686,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.2127609252929688,
+      "benefit_per_byte": 0.002105487717522515,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.2042971178889275,
+      "benefit_per_byte": 0.0020907936074460545,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.173008059267886,
+      "benefit_per_byte": 0.0020364723251178577,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.1180293502402492,
+      "benefit_per_byte": 0.0019410231775004326,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 138.5822758860886,
+      "benefit_per_byte": 0.0018796424138195612,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.074528694152832,
+      "benefit_per_byte": 0.0018655012051264446,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.0655829759780318,
+      "benefit_per_byte": 0.0018499704444063052,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 1.0104875033721328,
+      "benefit_per_byte": 0.001754318582243286,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.9281578063964844,
+      "benefit_per_byte": 0.001611385080549452,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.9029979771003127,
+      "benefit_per_byte": 0.0015677048213547096,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.87939453125,
+      "benefit_per_byte": 0.0015267266167534722,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.8467636108398438,
+      "benefit_per_byte": 0.0014700757132636176,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.7710004444234073,
+      "benefit_per_byte": 0.0013385424382350822,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.7210693359375,
+      "benefit_per_byte": 0.0012518564860026042,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.70999655732885,
+      "benefit_per_byte": 0.0012326329120292535,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 90.32652299851179,
+      "benefit_per_byte": 0.001225131876607419,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 89.50776598230004,
+      "benefit_per_byte": 0.0012140267738484705,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.69488525390625,
+      "benefit_per_byte": 0.0012063980102539062,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 84.72787667997181,
+      "benefit_per_byte": 0.0011491953759761803,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 41.68302662670612,
+      "benefit_per_byte": 0.001130724463615075,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.ln1.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.65045166015625,
+      "benefit_per_byte": 0.001129256354437934,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.6436220142059028,
+      "benefit_per_byte": 0.0011173993302185813,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.64349365234375,
+      "benefit_per_byte": 0.0011171764797634548,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.ln1.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.6373879847233184,
+      "benefit_per_byte": 0.0011065763623668721,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.6208986546553206,
+      "benefit_per_byte": 0.0010779490532210427,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.599681788822636,
+      "benefit_per_byte": 0.0010411142167059653,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.5983002981520258,
+      "benefit_per_byte": 0.0010387157954028226,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 66.40062816999853,
+      "benefit_per_byte": 0.0009006161589897804,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 14.026058867573738,
+      "benefit_per_byte": 0.0007609623951591655,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 27.529870130121708,
+      "benefit_per_byte": 0.0007467955221929717,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.4209093691315502,
+      "benefit_per_byte": 0.0007307454325200524,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.40680723066907376,
+      "benefit_per_byte": 0.0007062625532449197,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.38111100997775793,
+      "benefit_per_byte": 0.000661651058989163,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.3619401285541244,
+      "benefit_per_byte": 0.0006283682787397993,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 45.473214980214834,
+      "benefit_per_byte": 0.0006167699514460562,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 11.182277746498585,
+      "benefit_per_byte": 0.0006066773951008347,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 44.41892762109637,
+      "benefit_per_byte": 0.0006024702639580129,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 20.406052622944117,
+      "benefit_per_byte": 0.0005535496045720518,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 19.940006370656192,
+      "benefit_per_byte": 0.000540907290870665,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 38.87209121324122,
+      "benefit_per_byte": 0.0005272364802143178,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 9.526101904921234,
+      "benefit_per_byte": 0.0005168241050847024,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.2958989776088856,
+      "benefit_per_byte": 0.0005137135027932042,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 36.22123661637306,
+      "benefit_per_byte": 0.0004912819636552336,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 17.63432638347149,
+      "benefit_per_byte": 0.00047836171830163547,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 32.800330753438175,
+      "benefit_per_byte": 0.0004448829583528398,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 32.49550831504166,
+      "benefit_per_byte": 0.000440748539429276,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.g2",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 30.677889849059284,
+      "benefit_per_byte": 0.0004160955111905827,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 15.331660062074661,
+      "benefit_per_byte": 0.0004158978966491607,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.2231493159197271,
+      "benefit_per_byte": 0.00038741200680508174,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 6.652235493063927,
+      "benefit_per_byte": 0.0003609068735386245,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 13.14882031828165,
+      "benefit_per_byte": 0.00035668457894644234,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 6.565005414187908,
+      "benefit_per_byte": 0.00035617433887738216,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 6.236263448372483,
+      "benefit_per_byte": 0.0003383389457667363,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.18822153727523983,
+      "benefit_per_byte": 0.000326773502213958,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 5.909251980483532,
+      "benefit_per_byte": 0.00032059743817727495,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.x_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.16277199342948734,
+      "benefit_per_byte": 0.0002825902663706377,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.16209580291615566,
+      "benefit_per_byte": 0.0002814163245072147,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.16092011776345316,
+      "benefit_per_byte": 0.00027937520445043954,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 5.084921881556511,
+      "benefit_per_byte": 0.0002758746680531961,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.ln_x.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.1572586535476148,
+      "benefit_per_byte": 0.00027301849574238685,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.2.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 9.982860270887613,
+      "benefit_per_byte": 0.00027080241620246344,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 9.90380369964987,
+      "benefit_per_byte": 0.00026865786945664795,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 19.532647881656885,
+      "benefit_per_byte": 0.00026492849231847987,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 4.8309215269982815,
+      "benefit_per_byte": 0.0002620942668727366,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.14993407006841153,
+      "benefit_per_byte": 0.0002603022049798811,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.1482655941217672,
+      "benefit_per_byte": 0.0002574055453502903,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.att.ln_x.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.14675910579535412,
+      "benefit_per_byte": 0.00025479011422804534,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 9.183521166443825,
+      "benefit_per_byte": 0.00024911895525292493,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 9.043522250838578,
+      "benefit_per_byte": 0.00024532124161345966,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 4.488268963992596,
+      "benefit_per_byte": 0.0002435041755638344,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 8.888522585853934,
+      "benefit_per_byte": 0.00024111660660411062,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 4.276225283741951,
+      "benefit_per_byte": 0.00023200006964745827,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.k_a",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.1326141357421875,
+      "benefit_per_byte": 0.00023023287455240885,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 8.205345724709332,
+      "benefit_per_byte": 0.00022258424817462382,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 14.77072842232883,
+      "benefit_per_byte": 0.00020034082604070136,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 6.978045609779656,
+      "benefit_per_byte": 0.00018929160182779015,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 13.674035245552659,
+      "benefit_per_byte": 0.0001854659728400697,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 6.655203835107386,
+      "benefit_per_byte": 0.0001805339582006127,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.10214977659052238,
+      "benefit_per_byte": 0.00017734336213632359,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 6.4077980341389775,
+      "benefit_per_byte": 0.0001738226463253846,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 6.390639721415937,
+      "benefit_per_byte": 0.00017335719730403475,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.09578639626852237,
+      "benefit_per_byte": 0.00016629582685507357,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.09545892313690274,
+      "benefit_per_byte": 0.00016572729711267838,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.4.att.a1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 6.0303625501692295,
+      "benefit_per_byte": 0.00016358405355276773,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.09170295958756469,
+      "benefit_per_byte": 0.00015920652706174424,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 11.476766457781196,
+      "benefit_per_byte": 0.00015566360755454097,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.0805762910458725,
+      "benefit_per_byte": 0.00013988939417686197,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.08004892766621197,
+      "benefit_per_byte": 0.00013897383275384022,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 9.865821473300457,
+      "benefit_per_byte": 0.00013381376781277746,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 9.145482648164034,
+      "benefit_per_byte": 0.00012404354720274569,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 4.535616621375084,
+      "benefit_per_byte": 0.00012303647518921125,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 9.056794758886099,
+      "benefit_per_byte": 0.0001228406407183987,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.06347192869361606,
+      "benefit_per_byte": 0.000110194320648639,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 4.039521875558421,
+      "benefit_per_byte": 0.0001095790439333339,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 7.815660208463669,
+      "benefit_per_byte": 0.0001060066760045528,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.05867545677756425,
+      "benefit_per_byte": 0.00010186711246104905,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.05765106478793314,
+      "benefit_per_byte": 0.00010008865414571726,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 3.5847077444195747,
+      "benefit_per_byte": 9.724142101832613e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.055618618382140994,
+      "benefit_per_byte": 9.656010135788367e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 6.893862736411393,
+      "benefit_per_byte": 9.350399761842709e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 160.6518810465932,
+      "benefit_per_byte": 9.079085797717805e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.04950236080912873,
+      "benefit_per_byte": 8.59415986269596e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.047498077183263376,
+      "benefit_per_byte": 8.24619395542767e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.047231108215783024,
+      "benefit_per_byte": 8.199845176351219e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 144.93380139768124,
+      "benefit_per_byte": 8.190793716864762e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.04041487886570394,
+      "benefit_per_byte": 7.016472025295823e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 117.78351667150855,
+      "benefit_per_byte": 6.656421614555559e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 4.724933238700032,
+      "benefit_per_byte": 6.408600855441667e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.g1",
+      "lut2_bytes": 36872,
+      "u8_bytes": 110600,
+      "extra_bytes": 73728,
+      "weighted_error_reduction": 4.681308912113309,
+      "benefit_per_byte": 6.349431575674519e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.03615331603214145,
+      "benefit_per_byte": 6.276617366691223e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.03417134473056649,
+      "benefit_per_byte": 5.93252512683446e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.03362603594450775,
+      "benefit_per_byte": 5.8378534625881505e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 101.76557014510036,
+      "benefit_per_byte": 5.751182846922718e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1.9495738451369107,
+      "benefit_per_byte": 5.2885575226153174e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1.8071431554853916,
+      "benefit_per_byte": 4.9021895493852855e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.025983486143559276,
+      "benefit_per_byte": 4.511021899923485e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.02286491037284577,
+      "benefit_per_byte": 3.969602495285724e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.10.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.02275152329548291,
+      "benefit_per_byte": 3.9499172387991166e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.x_r",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.021724595475461683,
+      "benefit_per_byte": 3.77163115893432e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.7.att.w1",
+      "lut2_bytes": 18440,
+      "u8_bytes": 55304,
+      "extra_bytes": 36864,
+      "weighted_error_reduction": 1.363007617648691,
+      "benefit_per_byte": 3.697394796139027e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 58.55673539638519,
+      "benefit_per_byte": 3.3092773096372924e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.018013985276411404,
+      "benefit_per_byte": 3.12742799937698e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.6.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 46.76307588070631,
+      "benefit_per_byte": 2.6427700399162184e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.015064627630636096,
+      "benefit_per_byte": 2.6153867414298777e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.1.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 37.01063338294625,
+      "benefit_per_byte": 2.09162017725888e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.x_g",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.011204945179997594,
+      "benefit_per_byte": 1.945302982638471e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.5.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 34.00993206910789,
+      "benefit_per_byte": 1.922038442490635e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 33.35452618077397,
+      "benefit_per_byte": 1.884998812118755e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 29.388897333294153,
+      "benefit_per_byte": 1.6608851303266823e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 26.64554308541119,
+      "benefit_per_byte": 1.5058471162816474e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 6.390169671503827,
+      "benefit_per_byte": 1.4445370532009158e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 6.0572239137254655,
+      "benefit_per_byte": 1.3692726222795196e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.007663235068321228,
+      "benefit_per_byte": 1.3304227549168798e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 5.357604675227776,
+      "benefit_per_byte": 1.2111194017713253e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.ln0.bias",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.006922852371644694,
+      "benefit_per_byte": 1.2018840922994261e-05,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 5.194820801028982,
+      "benefit_per_byte": 1.1743211084502002e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 4.629112853202969,
+      "benefit_per_byte": 1.046439356644913e-05,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.ffn.key.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 17.13486433774233,
+      "benefit_per_byte": 9.683602983117183e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.x_v",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.005283003130898578,
+      "benefit_per_byte": 9.17188043558781e-06,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.9.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 3.5398708963766694,
+      "benefit_per_byte": 8.002095306117687e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 3.255777610465884,
+      "benefit_per_byte": 7.359885006297662e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 3.205989420413971,
+      "benefit_per_byte": 7.247335748548654e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.004170844639247662,
+      "benefit_per_byte": 7.241049720916079e-06,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.ln0.weight",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.003928141144569963,
+      "benefit_per_byte": 6.819689487100631e-06,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.8.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 2.960569638758898,
+      "benefit_per_byte": 6.692549277431681e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 2.8853457206860185,
+      "benefit_per_byte": 6.5225009961977776e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 2.3447922356426716,
+      "benefit_per_byte": 5.300546684305084e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 2.3136322740465403,
+      "benefit_per_byte": 5.2301076796842e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 2.064428500831127,
+      "benefit_per_byte": 4.666767263525226e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.9730834343936294,
+      "benefit_per_byte": 4.460276137500067e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.950012103188783,
+      "benefit_per_byte": 4.4081219780562405e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.941624145489186,
+      "benefit_per_byte": 4.3891604851372295e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.9403919354081154,
+      "benefit_per_byte": 4.386374998662008e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.9015606436878443,
+      "benefit_per_byte": 4.298594481716228e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.879836492240429,
+      "benefit_per_byte": 4.249485704753573e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.8752589826472104,
+      "benefit_per_byte": 4.239137963521797e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.8746998123824596,
+      "benefit_per_byte": 4.237873924837375e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.002351443655300045,
+      "benefit_per_byte": 4.082367457118134e-06,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.3.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.6844748929142952,
+      "benefit_per_byte": 3.8078588254898527e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.6829874571412802,
+      "benefit_per_byte": 3.804496385681786e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.3670310149900615,
+      "benefit_per_byte": 3.090257466611648e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.306884862948209,
+      "benefit_per_byte": 2.9542934004001397e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.2400957122445107,
+      "benefit_per_byte": 2.8033124282147683e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.2061275597661734,
+      "benefit_per_byte": 2.7265253358429483e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.181859313044697,
+      "benefit_per_byte": 2.6716654754518794e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.1703287945711054,
+      "benefit_per_byte": 2.6456000311304286e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.117441738024354,
+      "benefit_per_byte": 2.526045595577334e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 1.0500844825874083,
+      "benefit_per_byte": 2.3737803877934396e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.9967116434127092,
+      "benefit_per_byte": 2.2531278108107032e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.9960315874777734,
+      "benefit_per_byte": 2.2515905026533866e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.9714274117723107,
+      "benefit_per_byte": 2.195971254187262e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.8688588007353246,
+      "benefit_per_byte": 1.964108617113635e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.8551503801718354,
+      "benefit_per_byte": 1.93311989151981e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.11.ffn.x_k",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.0008981259370557382,
+      "benefit_per_byte": 1.5592464184995454e-06,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.v2",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 0.02781292130021029,
+      "benefit_per_byte": 1.5089475531798118e-06,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.11.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 2.5511109232902527,
+      "benefit_per_byte": 1.4417356834639105e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.10.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 2.2069092157762498,
+      "benefit_per_byte": 1.2472134149487811e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.9.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 1.8055089444387704,
+      "benefit_per_byte": 1.0203659308758603e-06,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 1.7034440642455593,
+      "benefit_per_byte": 9.62684950225581e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.8.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.3016762833867688,
+      "benefit_per_byte": 6.819577442011374e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.5242356492672116,
+      "benefit_per_byte": 2.962667107855968e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.key.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.08297942735953256,
+      "benefit_per_byte": 1.8758008571942945e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.3173796211485751,
+      "benefit_per_byte": 1.7936402562378783e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.receptance.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.0559777863236377,
+      "benefit_per_byte": 1.2654121980712371e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.7.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.055604445915378164,
+      "benefit_per_byte": 1.2569726091258446e-07,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.0384618719745049,
+      "benefit_per_byte": 8.694542094931121e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.5.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.1255869956803508,
+      "benefit_per_byte": 7.0974276891836e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.6.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.027765096820075996,
+      "benefit_per_byte": 6.276470454480432e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.09408314931715722,
+      "benefit_per_byte": 5.317018258393307e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.value.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.013536604194086976,
+      "benefit_per_byte": 3.0600324151129776e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.04192916010470071,
+      "benefit_per_byte": 2.3695859615015503e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.4.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.008994603732389805,
+      "benefit_per_byte": 2.0332853489379443e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.006538744571116695,
+      "benefit_per_byte": 1.4781233206553582e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.3.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.005088946068099176,
+      "benefit_per_byte": 1.1503874756083568e-08,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.2.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.01745146288885735,
+      "benefit_per_byte": 9.862525594560043e-09,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.001131679450509182,
+      "benefit_per_byte": 2.558230818027484e-09,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.att.output.weight",
+      "lut2_bytes": 221192,
+      "u8_bytes": 663560,
+      "extra_bytes": 442368,
+      "weighted_error_reduction": 0.0010375520469096955,
+      "benefit_per_byte": 2.3454500481718738e-09,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.1.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.0038129167496663285,
+      "benefit_per_byte": 2.154833051704875e-09,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.ffn.value.weight",
+      "lut2_bytes": 884744,
+      "u8_bytes": 2654216,
+      "extra_bytes": 1769472,
+      "weighted_error_reduction": 0.0014180165562720504,
+      "benefit_per_byte": 8.013783525662177e-10,
+      "calibrated": true
+    },
+    {
+      "name": "blocks.0.att.v0",
+      "lut2_bytes": 296,
+      "u8_bytes": 872,
+      "extra_bytes": 576,
+      "weighted_error_reduction": 0.0,
+      "benefit_per_byte": 0.0,
+      "calibrated": false
+    },
+    {
+      "name": "blocks.0.att.v1",
+      "lut2_bytes": 9224,
+      "u8_bytes": 27656,
+      "extra_bytes": 18432,
+      "weighted_error_reduction": 0.0,
+      "benefit_per_byte": 0.0,
+      "calibrated": false
+    }
+  ]
+}

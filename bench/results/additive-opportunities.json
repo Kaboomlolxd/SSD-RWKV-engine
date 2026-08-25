@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "promotion": {
+    "short": {
+      "lru": {
+        "layers": [],
+        "resident_bytes": 0,
+        "net_benefit_ms": 0,
+        "baseline_staging_ms": 26.8,
+        "projected_staging_plus_promotion_ms": 26.8
+      },
+      "highest_stall": {
+        "layers": [],
+        "resident_bytes": 0,
+        "net_benefit_ms": 0,
+        "baseline_staging_ms": 26.8,
+        "projected_staging_plus_promotion_ms": 26.8
+      },
+      "benefit_per_byte": {
+        "layers": [],
+        "resident_bytes": 0,
+        "net_benefit_ms": 0,
+        "baseline_staging_ms": 26.8,
+        "projected_staging_plus_promotion_ms": 26.8
+      }
+    },
+    "medium": {
+      "lru": {
+        "layers": [
+          3,
+          1
+        ],
+        "resident_bytes": 30,
+        "net_benefit_ms": 52.80000000000001,
+        "baseline_staging_ms": 160.8,
+        "projected_staging_plus_promotion_ms": 108.0
+      },
+      "highest_stall": {
+        "layers": [
+          2,
+          3
+        ],
+        "resident_bytes": 70,
+        "net_benefit_ms": 52.400000000000006,
+        "baseline_staging_ms": 160.8,
+        "projected_staging_plus_promotion_ms": 108.4
+      },
+      "benefit_per_byte": {
+        "layers": [
+          1,
+          3
+        ],
+        "resident_bytes": 30,
+        "net_benefit_ms": 52.80000000000001,
+        "baseline_staging_ms": 160.8,
+        "projected_staging_plus_promotion_ms": 108.0
+      }
+    },
+    "long": {
+      "lru": {
+        "layers": [
+          3,
+          1
+        ],
+        "resident_bytes": 30,
+        "net_benefit_ms": 333.6,
+        "baseline_staging_ms": 857.6,
+        "projected_staging_plus_promotion_ms": 524.0
+      },
+      "highest_stall": {
+        "layers": [
+          2,
+          3
+        ],
+        "resident_bytes": 70,
+        "net_benefit_ms": 374.8,
+        "baseline_staging_ms": 857.6,
+        "projected_staging_plus_promotion_ms": 482.8
+      },
+      "benefit_per_byte": {
+        "layers": [
+          1,
+          3
+        ],
+        "resident_bytes": 30,
+        "net_benefit_ms": 333.6,
+        "baseline_staging_ms": 857.6,
+        "projected_staging_plus_promotion_ms": 524.0
+      }
+    }
+  },
+  "placement": {
+    "round_robin_stall_ms": 4856.081904761905,
+    "optimized_stall_ms": 2710.6738095238097,
+    "modeled_speedup": 1.7914667149180092,
+    "physical_hardware_validated": false
+  }
+}

@@ -1,0 +1,3 @@
+architecture,state_transfer_ms,pcie_data_transferred_mb
+Host-Driven (PCIe bound),35.714285714285715,256.0
+ZTS-Scan (CSD offload),10.069754464285714,0.5

@@ -1,0 +1,66 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.20000000298023224,
+    "maximum_kl": 3.0486598014831543,
+    "maximum_state_relative_l2": 0.4474975087793306
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 3.1536247730255127,
+        "mean_abs": 2.561443328857422,
+        "max_abs": 12.797443389892578,
+        "relative_l2": 0.318797134770871,
+        "cosine": 0.9740309606036837,
+        "top_k": 10,
+        "top_k_overlap": 0.20000000298023224,
+        "min_top_k_overlap": 0.20000000298023224,
+        "kl_candidate_to_reference": 3.0486598014831543,
+        "max_kl_candidate_to_reference": 3.0486598014831543
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.2102889120578766,
+        "mean_abs": 0.01668580062687397,
+        "max_abs": 28.360586166381836,
+        "relative_l2": 0.4474975087793306,
+        "cosine": 0.9059777896599172
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 1.8618898391723633,
+        "mean_abs": 1.5329911708831787,
+        "max_abs": 7.392276763916016,
+        "relative_l2": 0.11620247522607405,
+        "cosine": 0.9960631421757155,
+        "top_k": 10,
+        "top_k_overlap": 0.699999988079071,
+        "min_top_k_overlap": 0.699999988079071,
+        "kl_candidate_to_reference": 0.5833025574684143,
+        "max_kl_candidate_to_reference": 0.5833025574684143
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.12307558953762054,
+        "mean_abs": 0.019052039831876755,
+        "max_abs": 11.340459823608398,
+        "relative_l2": 0.3738837615380254,
+        "cosine": 0.9291396517713597
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-hybrid-lut2-layer6"
+}

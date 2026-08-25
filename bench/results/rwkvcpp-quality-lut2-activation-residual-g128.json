@@ -1,0 +1,68 @@
+{
+  "observed": {
+    "minimum_top_k_overlap": 0.10000000149011612,
+    "maximum_kl": 4.729970932006836,
+    "maximum_state_relative_l2": 1.12385933300231
+  },
+  "gates": {
+    "minimum_top_k_overlap": false,
+    "maximum_kl": false,
+    "maximum_state_relative_l2": false
+  },
+  "passed": false,
+  "prompts": [
+    {
+      "prompt": "Hello",
+      "logits": {
+        "elements": 65536,
+        "rmse": 11.633212089538574,
+        "mean_abs": 10.744415283203125,
+        "max_abs": 26.723939895629883,
+        "relative_l2": 1.1759914383632628,
+        "cosine": 0.9499230145866067,
+        "top_k": 10,
+        "top_k_overlap": 0.10000000149011612,
+        "min_top_k_overlap": 0.10000000149011612,
+        "kl_candidate_to_reference": 3.179476737976074,
+        "max_kl_candidate_to_reference": 3.179476737976074
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.313862144947052,
+        "mean_abs": 0.03475841507315636,
+        "max_abs": 54.24516296386719,
+        "relative_l2": 0.6679016531779499,
+        "cosine": 0.7534673658278408
+      }
+    },
+    {
+      "prompt": "The future of storage is",
+      "logits": {
+        "elements": 65536,
+        "rmse": 3.634875535964966,
+        "mean_abs": 2.9089598655700684,
+        "max_abs": 15.095404624938965,
+        "relative_l2": 0.22685626182807206,
+        "cosine": 0.9740753842222865,
+        "top_k": 10,
+        "top_k_overlap": 0.20000000298023224,
+        "min_top_k_overlap": 0.20000000298023224,
+        "kl_candidate_to_reference": 4.729970932006836,
+        "max_kl_candidate_to_reference": 4.729970932006836
+      },
+      "state": {
+        "elements": 608256,
+        "rmse": 0.3699550926685333,
+        "mean_abs": 0.059455908834934235,
+        "max_abs": 51.31588363647461,
+        "relative_l2": 1.12385933300231,
+        "cosine": 0.3714300651157009
+      }
+    }
+  ],
+  "schema_version": 1,
+  "checkpoint": "test_model\\rwkv7-g1d-0.1b-FP16.bin",
+  "candidate_pack": ".pytest-tmp\\compression-lut2-activation-residual-g128",
+  "native_upload_scope": "block_layers_only",
+  "resident_native_tensors": "embedding, head, and non-block tensors remain from the ggml checkpoint"
+}

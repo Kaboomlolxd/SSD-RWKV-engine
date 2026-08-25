@@ -1,0 +1,38 @@
+{
+  "pack": "test_model\\runtime_pack_2.9b_grouped_quality",
+  "checkpoint": "test_model\\rwkv7-g1g-2.9b-20260526-ctx8192.pth",
+  "max_tokens": 12,
+  "samples": 1,
+  "strategy": "cpu bf16",
+  "io_backend": "mmap",
+  "decode_disk_cache": "0",
+  "tiers": [
+    "F1"
+  ],
+  "rows": [
+    {
+      "label": "F1 ssd-tier-min",
+      "mode": "streaming",
+      "tok_s": 2.1803024751810303,
+      "tok_s_wall": 1.670138025355663,
+      "wall_s": 7.185034900001483,
+      "decode_s": 5.503823499995633,
+      "prefill_s": 1.68121140000585,
+      "load_s": 9.292458399999305,
+      "z_mb": 671.09888,
+      "provider_mb": 4597.211656,
+      "native_model_mb": 0.0,
+      "tracked_weight_mb": 5268.310536000001,
+      "read_ms": 0.0,
+      "compute_ms": 5294.257399844355,
+      "staging_ms": 0.0,
+      "layer_steps": 384,
+      "cpu_threads": 8,
+      "tok_s_min": 2.1803024751810303,
+      "tok_s_max": 2.1803024751810303,
+      "samples": 1,
+      "frontier_id": "F1",
+      "vs_normal": 1.0
+    }
+  ]
+}

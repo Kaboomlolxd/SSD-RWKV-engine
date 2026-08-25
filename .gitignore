@@ -1,0 +1,112 @@
+# =========================
+# Python virtual environments
+# =========================
+.venv/
+.venv-xpu/
+.venv-xpu*/
+venv/
+env/
+
+# =========================
+# Python caches
+# =========================
+__pycache__/
+*.py[cod]
+*.nbi
+*.nbc
+.pytest_cache/
+.pytest-*/
+.pytest-tmp/
+/.pytest-tmp-*.json
+.ruff_cache/
+.mypy_cache/
+
+# =========================
+# Logs
+# =========================
+.logs/
+*.log
+
+# =========================
+# IDE
+# =========================
+.vscode/
+
+# =========================
+# Build artifacts
+# =========================
+build/
+dist/
+bin/
+*.egg-info/
+.cmake-temp/
+
+# =========================
+# Bench/temp artifacts
+# =========================
+_bench_pack/
+*.tmp
+*.cache
+/*.pack/
+/demo_pack/
+/trinity_grouped_*/
+bench/results/*.tmp
+bench/results/rwkvcpp_native_u8_*.json
+
+# Local runtime/test state
+.pytest-runtime*/
+.pytest-tmp*/
+
+# =========================
+# Locally generated model artifacts
+# =========================
+test_model/**/*.pth
+test_model/**/*.bin
+test_model/**/*.safetensors
+test_model/**/*.pt
+test_model/**/*.model
+test_model/**/.decode_cache/
+test_model/**/.state_cache/
+
+# =========================
+# Third-party clone
+# =========================
+test_model/ChatRWKV/
+
+# Local third-party application dump; keep it out of the project tree/index.
+test_model/Lossless-Scaling-AnkerGames/
+
+# Generated tokenizer/config metadata for locally staged test models.
+test_model/**/*.json
+test_model/**/*.log
+test_model/**/*.csv
+test_model/**/*.txt
+
+# Archived model payloads are reproducible local artifacts, not source.
+archive/test_model/**/*.bin
+archive/test_model/**/*.json
+archive/legacy/.logs/
+archive/logs/
+archive/native-build-experiments/
+bench/results/archive/
+
+# =========================
+# Native build experiments created at repository root
+# =========================
+/*.dll
+/manifest.json
+rwkv_ssd/native/*_omp.dll
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Generated architecture graph
+# =========================
+graphify-out/
+
+# Isolated local pytest bases used when the Windows global temp ACL is locked.
+/audit-pytest-tmp*/

@@ -1,0 +1,10 @@
+Metric,Round_Robin,Thermal_Aware,Note
+max_peak_temp_c,85.1,85.0,Highest die temperature reached
+avg_peak_temp_c,84.1,84.0,Average across all dies
+temp_range_c,5.1,5.0,Max-min across dies
+total_throttle_events,3085,848,Number of throttle events
+total_throttled_time_ms,308500,84800,Cumulative throttle duration
+effective_bw_loss_pct,4.0,1.1,Bandwidth loss from throttling
+effective_bw_gbs,26.88,27.69,Sustained RAID bandwidth
+tok_per_s,0.95,0.97,End-to-end token throughput
+throughput_speedup,1.00,1.02x,Thermal-aware vs round-robin

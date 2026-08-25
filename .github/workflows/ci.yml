@@ -1,0 +1,160 @@
+name: CPU CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  cpu:
+    name: Python ${{ matrix.python-version }} (CPU)
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12"]
+    env:
+      CUDA_VISIBLE_DEVICES: "-1"
+      RWKV_CPU_THREADS: "1"
+      OMP_NUM_THREADS: "1"
+      MKL_NUM_THREADS: "1"
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          # The native rwkv.cpp tree is an optional gitlink in this checkout.
+          # When its source/fixtures are available, the later steps build and
+          # qualify it; otherwise the CPU CI remains fully synthetic.
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package and test dependencies
+        shell: pwsh
+        run: python -m pip install --upgrade pip; python -m pip install -e ".[dev]"
+
+      - name: Prepare isolated test workspace
+        shell: pwsh
+        run: New-Item -ItemType Directory -Force .pytest-tmp | Out-Null
+
+      - name: Run default CPU tests
+        shell: pwsh
+        run: python -m pytest -q --cache-clear --basetemp .pytest-tmp\ci-default
+
+      - name: Compile Python sources
+        shell: pwsh
+        run: python -m compileall -q rwkv_ssd app tests
+
+      - name: Run release-contract tests without asset-dependent deselection
+        shell: pwsh
+        run: >-
+          python -m pytest -q --override-ini addopts="" --cache-clear
+          tests/test_pack_verify.py tests/test_quality_certificate.py
+          tests/test_preflight.py tests/test_serve.py tests/test_kimi_k3.py
+          --basetemp .pytest-tmp\ci-contracts
+
+      - name: Run software-marked tests when their assets are available
+        shell: pwsh
+        run: >-
+          python -m pytest -q -m "not chatrwkv" --cache-clear
+          --basetemp .pytest-tmp\ci-software
+
+      - name: Verify native loader isolation
+        shell: pwsh
+        run: python -m pytest -q tests/test_native_loader.py --cache-clear --basetemp .pytest-tmp\ci-native
+
+      - name: Run parity, worker-pool, sequence, and RSS contract gates
+        shell: pwsh
+        run: >-
+          python -m pytest -q --override-ini addopts="" --cache-clear
+          tests/test_parity_conformance.py tests/test_worker_pool.py
+          tests/test_sequence_pack_backends.py tests/test_memory_usage.py
+          tests/test_sampling.py
+          --basetemp .pytest-tmp\ci-runtime-contracts
+
+      - name: Build and run native rwkv.cpp layer ABI gate when source is available
+        shell: pwsh
+        run: |
+          if (Test-Path backends\rwkvcpp_ref\CMakeLists.txt) {
+            cmake -S backends\rwkvcpp_ref -B .pytest-tmp\rwkvcpp-build `
+              -DRWKV_BUILD_SHARED_LIBRARY=ON -DRWKV_STANDALONE=OFF `
+              -DGGML_CCACHE=OFF
+            cmake --build .pytest-tmp\rwkvcpp-build --config Release
+            # GPU-specific coverage is hardware-gated and remains outside the
+            # CPU release job; all native CPU/ABI tests are required here.
+            ctest --test-dir .pytest-tmp\rwkvcpp-build -E test_quantized_matmul_on_gpu --output-on-failure
+          } else {
+            Write-Host "rwkv.cpp source gitlink is unavailable; native CTest gate is conditional and skipped."
+          }
+
+      - name: Build and inspect wheel
+        shell: pwsh
+        run: |
+          python -m pip wheel . --no-deps --no-build-isolation --wheel-dir .pytest-tmp\ci-wheel
+          $wheel = Get-ChildItem .pytest-tmp\ci-wheel\*.whl | Select-Object -First 1
+          if (-not $wheel) { throw "wheel was not produced" }
+          $version = python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])"
+          $entryPoints = "rwkv_ssd-$version.dist-info/entry_points.txt"
+          python -c "import sys,zipfile; p,entry=sys.argv[1:]; n=set(zipfile.ZipFile(p).namelist()); required={'rwkv_ssd/native/lut2_gather.c','rwkv_ssd/tools/preflight.py',entry}; missing=sorted(required-n); print('wheel:',p); print('required:',sorted(required)); print('missing:',missing); sys.exit(1 if missing else 0)" $wheel.FullName $entryPoints
+
+      - name: Create and preflight synthetic release pack
+        shell: pwsh
+        run: |
+          python -m rwkv_ssd.tools.make_synthetic_pack --output .pytest-tmp\ci-pack
+          python -m rwkv_ssd.tools.preflight --pack .pytest-tmp\ci-pack
+
+      - name: Verify synthetic release artifact has no path escapes
+        shell: pwsh
+        run: >-
+          python -m pytest -q --override-ini addopts="" --cache-clear
+          tests/test_pack_verify.py::test_manifest_rejects_paths_outside_pack_root
+          --basetemp .pytest-tmp\ci-manifest-security
+
+      - name: Run benchmark harness smoke
+        shell: pwsh
+        run: python bench\bench_generate.py --model .pytest-tmp\ci-pack --quick --json
+
+      - name: Run real cross-backend benchmark when checked-in assets exist
+        shell: pwsh
+        run: |
+          if ((Test-Path test_model\rwkv7-g1d-0.1b-20260129-ctx8192.pth) -and (Test-Path test_model\rwkv7-g1d-0.1b-20260129-ctx8192-FP16.bin) -and (Test-Path test_model\runtime_pack)) {
+            python bench\bench_backend_compare.py --max-tokens 2 --samples 1 --threads 1
+          } else {
+            Write-Host "Real checkpoint/GGML assets are not present; synthetic benchmark smoke covered exit status."
+          }
+
+      - name: Run four-way ChatRWKV/rwkv.cpp conformance when assets are available
+        shell: pwsh
+        run: |
+          $pack = "test_model\runtime_pack"
+          $checkpoint = "test_model\rwkv7-g1d-0.1b-20260129-ctx8192.pth"
+          $ggml = "test_model\rwkv7-g1d-0.1b-20260129-ctx8192-FP16.bin"
+          $dll = "backends\rwkvcpp_ref\build\bin\librwkv.dll"
+          if ((Test-Path $pack) -and (Test-Path $checkpoint) -and (Test-Path $ggml) -and (Test-Path $dll)) {
+            python bench\bench_backend_conformance.py `
+              --pack $pack --checkpoint $checkpoint --ggml $ggml `
+              --prompt "The quick brown fox" --prompt "A short answer:" `
+              --max-tokens 4 --json-out .pytest-tmp\ci-conformance.json
+          } else {
+            Write-Host "Real ChatRWKV/rwkv.cpp assets are not present; four-way conformance gate skipped."
+          }
+
+      - name: Run F-tier cold/warm acceptance when native assets are available
+        shell: pwsh
+        run: |
+          $pack = "test_model\runtime_pack"
+          $checkpoint = "test_model\rwkv7-g1d-0.1b-20260129-ctx8192.pth"
+          $ggml = "test_model\rwkv7-g1d-0.1b-20260129-ctx8192-FP16.bin"
+          $dll = "backends\rwkvcpp_ref\build\bin\librwkv.dll"
+          if ((Test-Path $pack) -and (Test-Path $checkpoint) -and (Test-Path $ggml) -and (Test-Path $dll)) {
+            python bench\bench_f1_f3.py `
+              --pack $pack --checkpoint $checkpoint --ggml $ggml `
+              --tiers F1,F2,F3,F4,F5 --max-tokens 4 --samples 1 `
+              --json-out .pytest-tmp\ci-f-tier.json
+          } else {
+            Write-Host "Real F-tier assets are not present; cold/warm F-tier gate skipped."
+          }

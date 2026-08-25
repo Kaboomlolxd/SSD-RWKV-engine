@@ -1,0 +1,17 @@
+[
+  {"id": "arith-17-25", "prompt": "Answer with only the number: 17 + 25 =", "contains": "42"},
+  {"id": "arith-9x7", "prompt": "Answer with only the number: 9 * 7 =", "contains": "63"},
+  {"id": "instruction-ok", "prompt": "Reply with the single word OK.", "contains": "OK"},
+  {"id": "instruction-no", "prompt": "Reply with the single word NO.", "contains": "NO"},
+  {"id": "reverse-abc", "prompt": "Reverse the string abc without explanation.", "regex": "cba"},
+  {"id": "color-sky", "prompt": "In one word, what color is a clear daytime sky?", "regex": "(?i)blue"},
+  {"id": "lang-python", "prompt": "Name the programming language whose mascot is a snake.", "regex": "(?i)python"},
+  {"id": "code-buffer-overflow", "prompt": "In one sentence, name the bug class when C copies unbounded input into a fixed stack buffer.", "regex": "(?i)(buffer|overflow)"},
+  {"id": "json-bool", "prompt": "Return valid JSON only: {\"ready\": true}", "contains": "true"},
+  {"id": "count-e", "prompt": "How many letter e characters are in the word tree? Reply with only the number.", "contains": "2"},
+  {"id": "capital-france", "prompt": "What is the capital of France? One word answer.", "regex": "(?i)paris"},
+  {"id": "prime-11", "prompt": "Is 11 a prime number? Reply yes or no only.", "regex": "(?i)yes"},
+  {"id": "hex-ff", "prompt": "What is 255 in hexadecimal? Reply with 0x prefix.", "regex": "(?i)0x?ff"},
+  {"id": "html-tag", "prompt": "Which HTML tag creates a hyperlink? Reply with only the tag name.", "regex": "(?i)a"},
+  {"id": "sort-321", "prompt": "Sort these numbers ascending and reply comma-separated: 3,1,2", "contains": "1,2,3"}
+]

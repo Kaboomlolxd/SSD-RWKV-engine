@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "backend": "chatrwkv",
+  "outputs_match": true,
+  "batch_size": 2,
+  "tokens": 6,
+  "independent_wall_s": 6.586223299993435,
+  "batch_wall_s": 7.012513599998783,
+  "independent_tok_s": 0.9109924955028447,
+  "batch_tok_s": 0.8556133138909051,
+  "batch_weight_sweeps": 3,
+  "batch_weight_layer_loads": 36,
+  "scope": "real 0.1B CPU; prefill independent, decode layer-outer"
+}

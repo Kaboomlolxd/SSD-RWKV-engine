@@ -1,0 +1,44 @@
+{
+  "date": "2026-07-21",
+  "backend": "chatrwkv",
+  "device": "cpu compute + xpu LUT2 decode",
+  "xpu": {
+    "name": "Intel(R) Arc(TM) 140V GPU (16GB)",
+    "torch": "2.13.0+xpu",
+    "xpu_available": true,
+    "xpu_compute_available": false,
+    "selection": "RWKV_TRINITY_XPU_AUTO=1"
+  },
+  "common": {
+    "strategy": "cpu bf16",
+    "io_backend": "mmap",
+    "decode_disk_cache": "0",
+    "samples": 1,
+    "prompt": "XPU throughput test",
+    "measurement": "decode-only tok/s; short smoke"
+  },
+  "runs": [
+    {
+      "model": "0.1B",
+      "pack": "test_model/trinity_eval/trinity_lut2_0.1b",
+      "checkpoint": "test_model/rwkv7-g1d-0.1b-20260129-ctx8192.pth",
+      "max_tokens": 4,
+      "rows": {
+        "F6": {"tok_s": 20.1379854769, "tracked_weight_mb": 382.069248},
+        "F1": {"tok_s": 10.2625967610, "tracked_weight_mb": 240.613728},
+        "F3": {"tok_s": 13.6250734065, "tracked_weight_mb": 287.795776}
+      }
+    },
+    {
+      "model": "2.9B",
+      "pack": "test_model/runtime_pack_2.9b_lut2",
+      "checkpoint": "test_model/rwkv7-g1g-2.9b-20260526-ctx8192.pth",
+      "max_tokens": 2,
+      "rows": {
+        "F6": {"tok_s": 2.7857981680, "tracked_weight_mb": 5895.47008},
+        "F1": {"tok_s": 0.5439094125, "tracked_weight_mb": 2037.38752},
+        "F3": {"tok_s": 0.6917318229, "tracked_weight_mb": 2226.10992}
+      }
+    }
+  ]
+}
