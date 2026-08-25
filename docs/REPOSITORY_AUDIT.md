@@ -224,9 +224,8 @@ The audit found the following state that should be visible to release managers:
 
 - the superproject pins `backends/rwkvcpp_ref` at the reachable upstream
   commit `14663c83b6aba4885a47c1fba91204efc74a49d3`;
-- the superproject pins the ChatRWKV submodule at
-  `6f83d08ae7be0b895a7c316c83a95f5563abd722`, which contains the DirectML/JIT
-  compatibility fix;
+- the superproject pins the ChatRWKV submodule at the reachable upstream
+  commit `2e2bb1cd390cefbedae0a89f4a343f6f754d6621`;
 - `.gitmodules` is committed with explicit mappings for both gitlinks, so a
   clone has a deterministic submodule layout;
 - promoted packs and checkpoints are local/ignored artifacts. A wheel or
