@@ -39,9 +39,8 @@ def _fingerprint_files(root: Path, names: tuple[str, ...]) -> str:
 def model_fingerprint(pack_dir: str | Path) -> str:
     """Hash the immutable model/pack files that define tensor identity.
 
-    Runtime packs use ``manifest.json``.  Raw Hugging Face checkpoints such as
-    Kimi-K3 do not have a manifest, so hash their config and safetensors shard
-    set instead of allowing a state envelope to omit model identity.
+    Runtime packs use ``manifest.json``. Raw safetensors checkpoints do not,
+    so hash their config and shard set instead of omitting model identity.
     """
     root = Path(pack_dir)
     path = root / "manifest.json"
@@ -78,10 +77,6 @@ def tokenizer_fingerprint(pack_dir: str | Path) -> str:
             "vocab.json",
             "merges.txt",
             "rwkv_vocab_v20230424.txt",
-            # Kimi-K3's custom tiktoken tokenizer and remote-code assets.
-            "tiktoken.model",
-            "encoding_k3.py",
-            "tokenization_kimi.py",
             "added_tokens.json",
         ),
     )

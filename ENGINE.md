@@ -25,9 +25,9 @@ provider bytes, cache hits, and compute are recorded in `MetricsCollector`.
 | `synthetic` | Small deterministic pack and streaming golden tests | CI/reference only |
 | `albatross` | External layer-wise CUDA adapter over the shared pack provider | Hardware-gated; not locally certified |
 
-The supported runtime surface is deliberately RWKV-only. Historical Mamba,
-generic Transformer, and Kimi experiments remain isolated in their modules
-for research fixtures, but are not selectable through the CLI or service.
+The supported runtime surface is deliberately RWKV-only. The obsolete generic
+sequence-model executors and their state/fixture plumbing were removed so the
+CLI, service, snapshots, and performance work share one coherent model contract.
 
 Capabilities are declared in `rwkv_ssd/backends/capabilities.py` and selected
 through `rwkv_ssd/backends/factory.py`. Do not infer production support from a

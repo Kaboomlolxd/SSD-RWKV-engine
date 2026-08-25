@@ -32,7 +32,6 @@ The release boundary is therefore:
 | `rwkvcpp` resident CPU | **Green/amber** | Best real CPU deployment candidate; matching GGML and native build are required. |
 | `rwkvcpp` grouped-U8 streaming | **Amber** | Default compact direction; short-smoke certified and native memory/throughput-gated, but long-run quality is open. |
 | Local HTTP service | **Amber** | Bounded local service with workers, sessions, cancellation, and metrics; not an internet-facing deployment. |
-| Archived sequence experiments | **Research only** | Mamba2, generic Transformer, and Kimi sources are retained for experiments but are not an engine, CLI, or HTTP product surface. |
 | XPU | **Amber/red** | LUT decode is implemented and hardware evidence exists, but matrix compute is unavailable on the audited host and grouped-U8 is not supported there. |
 | CUDA/GDS/MPS | **Red** | Roadmap/research boundary; no local production gate. |
 | Albatross | **Amber/red** | Layer-wise CUDA pack adapter is wired to the shared provider and F1-F5 lifecycle; external checkout, compatible variant, CUDA, tokenizer, and quality/throughput gates remain required. |
@@ -61,7 +60,7 @@ flowchart LR
     E --> F["ManifestWeightProvider"]
     F --> G["prefetch + staging + z/provider/native caches"]
     G --> C
-    H["pack_runtime / pack_hf / shard_pack"] --> D
+    H["pack_runtime / shard_pack"] --> D
     I["verify_pack / preflight / quality_certificate"] --> D
     C --> J["ChatRWKV"]
     C --> K["rwkv.cpp + GGML + native grouped-U8 ABI"]
@@ -85,7 +84,6 @@ family, device, mode, pack codec, native ABI, and quality certificate.
 | Residency and caches | `residency.py`, `ram_budget.py`, `stream_cache_policy.py`, `weight_provider.py`, `decode_*`, `state_*`, `snapshot.py` | RAM tiers, provider/z/native caches, disk decode/state caches, snapshots and parking | Broad CPU contract coverage; large-model physical scaling remains unvalidated. |
 | Codec and execution kernels | `pack_codec.py`, `trinity_*`, `dequant.py`, `lut_*`, `packed_block_forward.py`, `rwkv7_linear.py` | Dense, scale-U8/U4, grouped-U8, LUT2, fused GEMV and packed block execution | Dense and grouped-U8 paths are the current direction; all-LUT2 real-model quality is blocked. |
 | RWKV model execution | `rwkv7_forward.py`, `rwkv7_batch.py`, `rwkv7_skeleton.py`, `rwkv7_weights.py`, `deepembed.py` | RWKV-7 resident/streaming, batching, skeleton loading, DeepEmbed variants | Active CPU/reference path; fused qkv/DEA production path remains open. |
-| Archived sequence execution | `backends/sequence.py`, `runtime/sequence_state.py`, `runtime/dspark.py` | Mamba2 and HF-style Transformer/Llama/Qwen/Mistral research references | Not part of the maintained runtime contract. |
 | Native integration | `rwkv_ssd/native/`, `runtime/ggml_*`, `backends/rwkvcpp.py`, `backends/rwkvcpp_ref/` | Windows LUT2 gather, GGML bridge, layer-local ABI, grouped-U8 upload | Locally functional and cleanly pinned; public reproducibility awaits publication of the nested commits. |
 
 ## Path-by-path progress and readiness
@@ -98,7 +96,7 @@ family, device, mode, pack codec, native ABI, and quality certificate.
 | `app/cli.py` | Configuration and launch path for resident, partial, and streaming modes; real CPU default is `rwkvcpp`. | CLI/config tests and synthetic end-to-end tests. | **Usable locally**; exact model/native prerequisites must be documented per deployment. |
 | `app/serve.py` | OpenAI-compatible `/v1/chat/completions`, `/v1/completions`, `/v1/models`, `/health`, `/metrics`. | Serving tests cover auth/CORS controls, body limits, sessions, streaming, sampling, and metrics. | **Local/private-network only**. No TLS, external rate limiting, multi-host orchestration, or hardened gateway. |
 | `app/worker_pool.py` | Spawned workers own independent engines; parent routes sessions, state envelopes, cancellations, health, and restart. | `tests/test_worker_pool.py` and worker-pool HTTP integration tests. | **Promising local service boundary**; still needs load, crash, and RSS qualification with the actual target model. |
-| `rwkv_ssd/tools/pack_runtime.py` / `pack_hf.py` | Packs RWKV/PyTorch/HF-style inputs and records model-family metadata. | Pack, safetensors, metadata, codec, and family-detection tests. | **Tooling-ready**; generated packs are not distributed by the Python wheel. |
+| `rwkv_ssd/tools/pack_runtime.py` | Packs RWKV PyTorch/safetensors inputs and records model-family metadata. | Pack, safetensors, codec, and RWKV family-detection tests. | **Tooling-ready**; generated packs are not distributed by the Python wheel. |
 | `rwkv_ssd/tools/verify_pack.py` / `preflight.py` | Structural offsets, hash, path containment, backend assets, native assets, and certificate checks. | Pack verification, path-security, preflight, and quality-certificate tests. | **Required release gate**, provided the exact artifacts are supplied. |
 | `rwkv_ssd/runtime/quality_certificate.py` | Binds metrics to manifest identity, metadata identity, and every declared artifact hash. | Certificate issue/verify tests and current 2.9B certificate. | **Good control**, but certificate scope must be expanded before a broad quality claim. |
 
@@ -110,7 +108,6 @@ family, device, mode, pack codec, native ABI, and quality certificate.
 | `chatrwkv` | RWKV-7 PyTorch resident and pack-streaming path, F tiers, state cache, batching, DeepEmbed handling, CPU/XPU split. | Strongest reference for pack parity; real fixtures are opt-in/asset-dependent. | More sustained real-model qualification and a fused qkv/DEA production path. |
 | `rwkvcpp` resident | Native GGML resident inference with matching converted `.bin`; explicit native thread policy and state/snapshot bridge. | Native CTest 8/8; local real-model comparisons; backend tests. | Pin and publish the exact native ABI/source revision and conversion recipe. |
 | `rwkvcpp` provider streaming | Layer-local native plan, provider upload, persistent/transient dense borrowing, native cache accounting, grouped-U8 packed-only graph. | 0.1B conformance/F-tier gates and 2.9B native throughput/memory gates. | Long-run quality, cold-start/prefill/concurrency SLOs, and clean dependency provenance. |
-| Archived sequence/Kimi adapters | Mamba, Transformer-family, and Kimi implementations remain source-level experiments. | Their own fixtures may still run when dependencies are present. | They are intentionally excluded from engine, CLI, and HTTP support. |
 | `albatross` | External layer-wise CUDA adapter over `ManifestWeightProvider`; dense materialization supports the existing pack codecs and F1-F5 cache lifecycle. | Static/import checks and explicit unavailable errors on CPU; CUDA execution is not locally tested. | Compatible Albatross checkout, greedy parity, sustained quality/throughput, and CUDA memory gates. |
 | external engines | `app/lightning_proxy.py` is an HTTP proxy/reference hook, not an in-process backend. | No engine quality claim. | Treat as an integration boundary with its own service/SLO contract. |
 
@@ -129,7 +126,7 @@ family, device, mode, pack codec, native ABI, and quality certificate.
 The pack path has a useful separation between structural validity and model
 quality:
 
-1. `pack_runtime`/`pack_hf` create tensor records and payloads.
+1. `pack_runtime` creates tensor records and payloads.
 2. `Manifest` resolves tensor names, shapes, codec, offsets, residency, and
    optional shard files.
 3. `verify_pack` checks version, bounds, alignment, hashes, and declared files.
@@ -158,8 +155,8 @@ to promote a lossy pack.
 
 The repository has unusually broad contract coverage for the CPU engine:
 
-- full Python collection currently contains **658 tests**;
-- the latest current full local gate is **636 passed, 22 skipped in 220.18 s**
+- full Python collection currently contains **595 tests**;
+- the latest current full local gate is **577 passed, 18 skipped in 173.91 s**
   using `pytest --override-ini "addopts="`; the slowest calls are the
   RWKV7a DeepEmbed parity checks (55.31 s and 32.49 s), so a short CI timeout
   is not an adequate full-gate budget;
@@ -169,10 +166,11 @@ The repository has unusually broad contract coverage for the CPU engine:
   grouped/native bridge behavior;
 - `compileall`, `pip check`, wheel inspection, JSON parsing, and `git diff
   --check` have passed in the current remediation record;
-- vendored native CTest is recorded as **8/8 passed** on the local build.
+- the former vendored native **8/8** record is historical and does not qualify
+  the newly pinned public upstream revision.
 
 The test suite proves code contracts, not universal hardware support. Real
-checkpoint tests are often skipped unless local `.pth`, `.bin`, HF, Kimi, or
+checkpoint tests are often skipped unless local `.pth`, `.bin`, or
 native assets exist. The CI workflow explicitly makes several real-model and
 native evidence steps conditional on those assets, so a green CI run can still
 be a synthetic/contract run.
@@ -259,7 +257,9 @@ were moved or never existed, including the old planning and Albatross notes.
 Those links do not affect runtime, but they should either be redirected to the
 archived path or labeled as historical in a later documentation cleanup. The
 milestone ledger also contains older snapshot counts; its current gate is the
-July 31, 2026 **636/22 and 8/8** record, not the older 634/22 or 7/7 snapshot.
+August 24, 2026 **577/18** Python record. Native qualification must be rerun
+against the newly public upstream submodule pin before publishing a new CTest
+count.
 
 ## Production acceptance plan
 

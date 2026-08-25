@@ -95,46 +95,11 @@ def _is_global_resident_name(name: str) -> bool:
     if lower == "emb.weight":
         return True
     if lower in {
-        "backbone.embeddings.weight",
-        "backbone.norm_f.weight",
-        "model.embed_tokens.weight",
-        "model.model.embed_tokens.weight",
-        "model.norm.weight",
-        "model.model.norm.weight",
-        "transformer.wte.weight",
-        "transformer.wpe.weight",
-        "transformer.ln_f.weight",
-        "transformer.ln_f.bias",
-    }:
-        return True
-    if lower in {
         "head.weight",
         "output.weight",
-        "lm_head.weight",
-        "model.output.weight",
-        "model.lm_head.weight",
-        "model.model.output.weight",
-        "model.model.lm_head.weight",
-        "backbone.lm_head.weight",
-        "transformer.lm_head.weight",
     } or lower.endswith(".head.weight"):
         return True
-    if lower in {
-        "lm_head.bias",
-        "model.lm_head.bias",
-        "model.model.lm_head.bias",
-        "transformer.lm_head.bias",
-    }:
-        return True
     if lower.startswith("ln_out."):
-        return True
-    if lower.startswith(("backbone.norm_f.", "model.norm.", "model.model.norm.")):
-        return True
-    if lower.startswith("transformer.ln_f."):
-        return True
-    if lower.startswith("backbone.embeddings."):
-        return True
-    if lower.startswith(("model.embed_tokens.", "model.model.embed_tokens.")):
         return True
     if lower in ("blocks.0.ln0.weight", "blocks.0.ln0.bias"):
         return True

@@ -119,7 +119,6 @@ def probe_backend_capabilities(backend: RecurrentBackend) -> dict[str, object]:
 def backend_capabilities(backend: RecurrentBackend) -> BackendCapabilities:
     from rwkv_ssd.backends.albatross import AlbatrossBackend
     from rwkv_ssd.backends.chatrwkv import ChatRWKVBackend
-    from rwkv_ssd.backends.kimi_k3 import KimiK3CPUBackend
     from rwkv_ssd.backends.rwkvcpp import RWKVCppBackend
 
     if isinstance(backend, AlbatrossBackend):
@@ -199,28 +198,6 @@ def backend_capabilities(backend: RecurrentBackend) -> BackendCapabilities:
             supports_cancellation=True,
             supports_deadlines=True,
             supports_process_workers=True,
-        )
-    if isinstance(backend, KimiK3CPUBackend):
-        return BackendCapabilities(
-            name="kimi_k3",
-            supports_pack_streaming=False,
-            supports_skeleton=False,
-            supports_resident=True,
-            supports_state_snapshot=True,
-            supports_batch=False,
-            supports_prefix_cache=True,
-            supports_tokenizer=True,
-            state_kind="kimi_k3",
-            supports_logits_probe=True,
-            supports_state_transfer=True,
-            supports_followup_generation=True,
-            supports_sampling=True,
-            supports_incremental_streaming=True,
-            supports_cancellation=True,
-            supports_deadlines=True,
-            supports_process_workers=True,
-            supports_native_layer_streaming=False,
-            supports_native_cached_layer_step=False,
         )
     if isinstance(backend, RWKVCppBackend):
         return BackendCapabilities(

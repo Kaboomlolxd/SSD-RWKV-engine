@@ -30,8 +30,8 @@ def test_preflight_reports_manifest_escape(mutable_synthetic_pack) -> None:
     )
 
 
-def test_preflight_rejects_archived_or_unknown_runtime_backend(synthetic_pack) -> None:
-    result = run_preflight(synthetic_pack, backend="mamba2")
+def test_preflight_rejects_unknown_runtime_backend(synthetic_pack) -> None:
+    result = run_preflight(synthetic_pack, backend="unsupported")
     assert result["passed"] is False
     assert any(
         item["name"] == "backend" and item["ok"] is False

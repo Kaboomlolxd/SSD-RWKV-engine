@@ -205,16 +205,6 @@ def _array(value: Any) -> np.ndarray:
         external = getattr(value, "external_state", None)
         if external is not None:
             parts.append(_array(external).reshape(-1))
-        sequence = getattr(value, "sequence_state", None)
-        if sequence is not None:
-            next_logits = getattr(sequence, "next_logits", None)
-            if next_logits is not None:
-                parts.append(_array(next_logits).reshape(-1))
-            for layer in getattr(sequence, "layers", ()):  # Mamba/Transformer state
-                for name in ("conv", "ssm", "key", "value"):
-                    tensor = getattr(layer, name, None)
-                    if tensor is not None:
-                        parts.append(_array(tensor).reshape(-1))
         if parts:
             return np.concatenate(parts).astype(np.float64, copy=False)
     if isinstance(value, (list, tuple)):

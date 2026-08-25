@@ -13,8 +13,6 @@ from typing import Generic, TypeVar
 
 import torch
 
-from rwkv_ssd.runtime.sequence_state import SequenceState, clone_sequence_state
-
 T = TypeVar("T")
 
 
@@ -38,17 +36,12 @@ def clone_rwkv7_state(state: list[torch.Tensor]) -> list[torch.Tensor]:
 
 @dataclass
 class RecurrentState:
-    """Backend-owned recurrent state.
-
-    ``h`` and ``rwkv7_state`` remain the legacy synthetic/ChatRWKV forms.
-    Packed Mamba and Transformer backends use ``sequence_state``.
-    """
+    """Backend-owned recurrent state for RWKV-compatible backends."""
 
     last_token_id: int = 0
     h: torch.Tensor | None = None
     rwkv7_state: list[torch.Tensor] | None = None
     external_state: object | None = None
-    sequence_state: SequenceState | None = None
 
     def clone(self) -> "RecurrentState":
         return RecurrentState(
@@ -60,7 +53,6 @@ class RecurrentState:
                 else None
             ),
             external_state=_clone_external_state(self.external_state),
-            sequence_state=clone_sequence_state(self.sequence_state),
         )
 
 
@@ -125,7 +117,6 @@ class PrefixStateCache:
                 else None
             ),
             external_state=_clone_external_state(state.external_state),
-            sequence_state=clone_sequence_state(state.sequence_state),
         )
 
     def put(self, prefix_key: str, state: RecurrentState) -> None:
@@ -143,7 +134,6 @@ class PrefixStateCache:
                 else None
             ),
             external_state=_clone_external_state(state.external_state),
-            sequence_state=clone_sequence_state(state.sequence_state),
         )
         self._entries[prefix_key] = stored
         self._order.append(prefix_key)
@@ -152,7 +142,6 @@ class PrefixStateCache:
             and (
                 stored.rwkv7_state is not None
                 or stored.external_state is not None
-                or stored.sequence_state is not None
             )
         ):
             try:

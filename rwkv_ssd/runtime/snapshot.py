@@ -30,13 +30,6 @@ from pathlib import Path
 import torch
 
 from rwkv_ssd.runtime.state_cache import RecurrentState, clone_rwkv7_state
-from rwkv_ssd.runtime.sequence_state import (
-    MambaLayerState,
-    SequenceState,
-    TransformerKVState,
-    sequence_state_tensors,
-    validate_sequence_state,
-)
 
 _SNAP_MAGIC = b"RWS\x01"
 _SNAP_VERSION = 2
@@ -185,10 +178,6 @@ def _tensor_specs(state: RecurrentState) -> list[tuple[list[int], int, int]]:
         for t in state.rwkv7_state:
             nbytes = t.numel() * t.element_size()
             specs.append((list(t.shape), _DTYPE_TO_CODE[t.dtype], nbytes))
-    if state.sequence_state is not None:
-        for t in sequence_state_tensors(state.sequence_state):
-            nbytes = t.numel() * t.element_size()
-            specs.append((list(t.shape), _DTYPE_TO_CODE[t.dtype], nbytes))
     return specs
 
 
@@ -197,7 +186,6 @@ def _state_kind(state: RecurrentState) -> str:
         state.h is not None,
         state.rwkv7_state is not None,
         state.external_state is not None,
-        state.sequence_state is not None,
     ]
     if sum(kinds) > 1:
         raise ValueError("recurrent state must contain exactly one state representation")
@@ -207,9 +195,6 @@ def _state_kind(state: RecurrentState) -> str:
         return "rwkv7"
     if state.external_state is not None:
         return "external"
-    if state.sequence_state is not None:
-        validate_sequence_state(state.sequence_state)
-        return "sequence"
     return "empty"
 
 
@@ -223,13 +208,6 @@ def _encode_state(state: RecurrentState) -> bytes:
             parts.append(t.numpy().tobytes())
     if state.rwkv7_state is not None:
         for t in state.rwkv7_state:
-            tc = t.detach().contiguous().cpu()
-            if tc.dtype == torch.bfloat16:
-                parts.append(tc.view(torch.uint16).numpy().tobytes())
-            else:
-                parts.append(tc.numpy().tobytes())
-    if state.sequence_state is not None:
-        for t in sequence_state_tensors(state.sequence_state):
             tc = t.detach().contiguous().cpu()
             if tc.dtype == torch.bfloat16:
                 parts.append(tc.view(torch.uint16).numpy().tobytes())
@@ -280,79 +258,6 @@ def _decode_state(
     )
 
 
-def _sequence_header(state: SequenceState) -> dict[str, object]:
-    validate_sequence_state(state)
-    layers: list[dict[str, object]] = []
-    if state.kind == "mamba2":
-        for _layer in state.layers:
-            layers.append({"kind": "mamba2", "tensors": ["conv", "ssm"]})
-    else:
-        for _layer in state.layers:
-            layers.append({"kind": "transformer", "tensors": ["key", "value"]})
-    return {
-        "kind": state.kind,
-        "position": int(state.position),
-        "batch_size": int(state.batch_size),
-        "context_limit": state.context_limit,
-        "layers": layers,
-    }
-
-
-def _decode_sequence(
-    payload: bytes,
-    specs: list[tuple[list[int], int, int]],
-    sequence_meta: dict,
-    *,
-    last_token_id: int,
-) -> RecurrentState:
-    kind = str(sequence_meta.get("kind", "")).strip().lower()
-    if kind not in {"mamba2", "transformer"}:
-        raise ValueError(f"unsupported sequence snapshot kind {kind!r}")
-    raw_layers = sequence_meta.get("layers")
-    if not isinstance(raw_layers, list) or not raw_layers:
-        raise ValueError("sequence snapshot is missing layer metadata")
-    tensors: list[torch.Tensor] = []
-    cursor = 0
-    for idx, (shape, code, nbytes) in enumerate(specs):
-        if code not in _CODE_TO_DTYPE:
-            raise ValueError(f"unsupported sequence snapshot dtype code {code}")
-        dtype = _CODE_TO_DTYPE[code]
-        chunk = payload[cursor : cursor + nbytes]
-        if len(chunk) != nbytes:
-            raise ValueError(
-                f"sequence snapshot payload truncated at tensor {idx}: "
-                f"wanted {nbytes} got {len(chunk)}"
-            )
-        tensors.append(torch.frombuffer(bytearray(chunk), dtype=dtype).reshape(shape).clone())
-        cursor += nbytes
-    expected = len(raw_layers) * 2 + 1
-    if len(tensors) != expected:
-        raise ValueError(
-            f"sequence snapshot tensor count mismatch: expected {expected}, got {len(tensors)}"
-        )
-    layers: list[MambaLayerState | TransformerKVState] = []
-    for layer_id in range(len(raw_layers)):
-        first, second = tensors[layer_id * 2 : layer_id * 2 + 2]
-        if kind == "mamba2":
-            layers.append(MambaLayerState(first, second))
-        else:
-            layers.append(TransformerKVState(first, second))
-    state = SequenceState(
-        kind=kind,
-        position=int(sequence_meta.get("position", 0)),
-        batch_size=int(sequence_meta.get("batch_size", 1)),
-        context_limit=(
-            int(sequence_meta["context_limit"])
-            if sequence_meta.get("context_limit") is not None
-            else None
-        ),
-        layers=layers,
-        next_logits=tensors[-1],
-    )
-    validate_sequence_state(state)
-    return RecurrentState(last_token_id=last_token_id, sequence_state=state)
-
-
 def save_snapshot(
     path: str | Path,
     state: RecurrentState,
@@ -375,8 +280,6 @@ def save_snapshot(
         "state_kind": _state_kind(state),
         "meta": meta.to_dict(),
     }
-    if state.sequence_state is not None:
-        header["sequence_state"] = _sequence_header(state.sequence_state)
     if external is not None:
         header["external_spec"] = {
             "shape": external[0],
@@ -466,28 +369,17 @@ def load_snapshot(path: str | Path) -> tuple[RecurrentState, SnapshotMeta]:
             if meta.backend.strip().lower() == "chatrwkv"
             else ("h" if len(specs) == 1 else "rwkv7")
         )
-    if state_kind not in {"h", "rwkv7", "external", "empty", "sequence"}:
+    if state_kind not in {"h", "rwkv7", "external", "empty"}:
         raise ValueError(f"unsupported snapshot state kind {state_kind!r}")
     if state_kind in {"external", "empty"} and specs:
         raise ValueError(f"snapshot state kind {state_kind!r} cannot contain tensor specs")
     tensor_total = sum(s[2] for s in specs)
-    if state_kind == "sequence":
-        sequence_raw = header.get("sequence_state")
-        if not isinstance(sequence_raw, dict):
-            raise ValueError("sequence snapshot is missing sequence_state metadata")
-        state = _decode_sequence(
-            payload[:tensor_total],
-            specs,
-            sequence_raw,
-            last_token_id=meta.last_token_id,
-        )
-    else:
-        state = _decode_state(
-            payload[:tensor_total],
-            specs,
-            last_token_id=meta.last_token_id,
-            state_kind=state_kind,
-        )
+    state = _decode_state(
+        payload[:tensor_total],
+        specs,
+        last_token_id=meta.last_token_id,
+        state_kind=state_kind,
+    )
     if external_raw and external_nbytes:
         shape = tuple(int(x) for x in external_raw.get("shape", []))
         code = int(external_raw.get("dtype_code", _DTYPE_FP32))

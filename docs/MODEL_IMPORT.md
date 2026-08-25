@@ -1,6 +1,6 @@
 # Model import and preparation
 
-The supported distribution workflow is model-independent:
+The supported distribution workflow is RWKV-specific:
 
 ```text
 source checkpoint or HF directory/repository
@@ -17,12 +17,11 @@ can be copied to any machine without depending on a developer's test tree.
 
 ## Install the importer
 
-For local PyTorch/RWKV inputs, the base package is sufficient. For HF
-directories, HF repository downloads, and local text tokenization, install the
-optional HF dependencies:
+For local PyTorch/RWKV inputs, the base package is sufficient. For Hugging Face
+repository downloads, install the optional Hub dependency:
 
 ```powershell
-python -m pip install -e ".[hf]" "transformers>=4.40.0"
+python -m pip install -e ".[hf]"
 ```
 
 The installed `rwkv-ssd-pack` command is equivalent to
@@ -36,9 +35,7 @@ packed runtime is RWKV-focused:
 | Family | Input preparation | Runtime path | Boundary |
 |---|---|---|---|
 | RWKV-5/6/7 | `.pth`, `.pt`, or safetensors | `chatrwkv` reference; `rwkvcpp` when a matching GGML model/native build is supplied | RWKV-7 streaming is the qualified reference path; other versions need their own qualification |
-| Non-RWKV families | HF directory or safetensors plus metadata | Import/classification only | Research/archive input; rejected by the maintained runtime factory |
-
-An unsupported or ambiguous architecture fails during family detection or
+An unsupported or ambiguous architecture remains `unknown` and fails
 preflight. Do not force an unrelated family to make a pack appear valid.
 
 ## Local model directory or checkpoint
@@ -72,8 +69,8 @@ rwkv-ssd-preflight `
   --checkpoint C:\models\rwkv-model.pth
 ```
 
-Use `--model-family` only when the model uses a non-standard naming scheme and
-you have verified that the selected backend implements that architecture.
+Use `--model-family` only for a verified RWKV checkpoint with a non-standard
+naming scheme.
 
 ## Hugging Face repository ID
 

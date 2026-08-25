@@ -41,9 +41,7 @@ A developer can run a **local RWKV-7 model** from a **packed weight file on SSD*
 - Training, fine-tuning, or a LoRA marketplace 
 - Custom 2-bit / ANS compression in the hot path 
 - Beating H100 VRAM throughput or matching vLLM feature parity 
-- Mamba / Transformer / Engram as first-class production models in this repo
-  (research-only tiny baselines are included; see `research/` and
-  [`RESEARCH_AND_ARCHITECTURE.md`](RESEARCH_AND_ARCHITECTURE.md))
+- Additional model families as first-class production models in this repo.
 - Publishing or defending simulation suites as “measured E2E” 
 - **Re-implementing** what **rwkv_lightning**, **web-rwkv**, or **RWKV-Infer** already ship (HTTP, state cache, batch quant) without a documented borrow/wrap decision 
 

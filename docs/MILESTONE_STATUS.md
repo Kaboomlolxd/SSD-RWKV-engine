@@ -4,18 +4,17 @@ The long-term roadmap target remains GPU inference with SSD-backed weights.
 That target is not the current release posture; the current release is
 CPU-first and is defined in [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
 
-## Current release gate (last verified July 31, 2026)
+## Current release gate (last verified August 24, 2026)
 
-The complete local CPU/native gate passed **636 tests**, with 22 skipped. The
-run used `python -m pytest -q --override-ini "addopts="`, so it included the
-marked parity, serving, sequence-backend, and Kimi-K3 checks. The vendored
-native gate passed **8/8 CTest targets** with `-DGGML_CCACHE=OFF`, including
-the layer-local ABI test.
+The complete local Python gate passed **577 tests**, with 18 skipped. The run
+used `python -m pytest -q --override-ini "addopts="`, so it included marked
+parity and serving checks. Native qualification must be rerun against the
+newly public upstream submodule pin.
 This ledger keeps historical milestone numbers below; [`PROJECT_STATUS.md`](PROJECT_STATUS.md)
 is the current recommendation source.
 
-Current verification: **July 31, 2026** — full local Python suite **636 passed,
-22 skipped**; vendored native CTest **8/8 passed**.
+Current verification: **August 24, 2026** — full local Python suite **577
+passed, 18 skipped**.
 
 The **July 28, 2026** result of **634 passed, 22 skipped** and the earlier
 **7/7** native result are historical snapshots, retained below only for
@@ -60,29 +59,18 @@ larger 2.9B grouped-U8 diagnostic F1-F4 are 1.90-2.25 tok/s and remain inside
 the explicit 12 GB RSS, 1 GiB provider, and 512 MiB native-layer budgets.
 The 2.9B result is not a quality promotion.
 
-Mamba2 and Transformer adapters now implement the common generation,
-streaming, state, sampling, cancellation/deadline, metrics, prefix-reuse,
-and qualified batching contract against their own resident references.
 HTTP serving now has a bounded spawned process-worker pool, versioned state
 envelopes, worker health/restart handling, cancellation acknowledgements, and
 aggregated queue/latency/RSS metrics; the default remains one worker.
-
-Kimi-K3-0.18B now has a resident CPU KDA/MLA+sparse-MoE adapter with a narrow
-PyTorch FLA compatibility layer, explicit generic/layer-streaming capability
-errors, seeded sampling, cancellation, and state/snapshot transfer. FP16/BF16
-resident modes have matched the checked-in local prompts against FP32; Kimi
-low-RAM layer streaming remains intentionally unqualified.
 
 ## July 15 architecture slice
 
 DeepEmbed variant detection now distinguishes the qkv/DEA sidecar contract
 from RWKV7a DeepEmbed-v1. The latter uses upstream ChatRWKV's
 `RWKV_DE_VERSION=1` path and is supported for resident inference and CPU
-layer streaming; qkv/DEA now has a sidecar-backed CPU reference stream. Exact
-layer-outer chunked prefill, real small-checkpoint Mamba-2 and Transformer CPU references, and
-the ~0.01B toy architecture baselines are also implemented. Verification for
-this slice includes the default suite (`487 passed`), the real Mamba/Transformer
-gate (`3 passed`), DeepEmbed/capability tests, and the real RWKV7a resident vs
+layer streaming; qkv/DEA now has a sidecar-backed CPU reference stream.
+Verification for this slice includes DeepEmbed/capability tests and the real
+RWKV7a resident vs
 streaming parity gate; see
 [`RESEARCH_AND_ARCHITECTURE.md`](RESEARCH_AND_ARCHITECTURE.md).
 
@@ -124,8 +112,6 @@ measurements, and new quantization codecs without measured quality evidence.
 | **Real ChatRWKV weight-stationary batching** | **Done on CPU (July 12)** — dense layer-outer/session-inner decode with exact greedy parity. Clean two-session/8-token diagnostic: **1.12→1.89 aggregate end-to-end tok/s (1.69x)** and **1.37→2.75 aggregate decode-only tok/s (2.01x)**; per-session latency unchanged at about 0.73 s/token. Short requests remain prefill-bound. |
 | **DeepEmbed variant-aware packing** | **Done on CPU (July 15)** — qkv/DEA emits `DeepEmbed.bin`; RWKV7a-v1 keeps `s_emb`/`s_emb_x` in packed tensors and records `deepembed_streaming_supported=true`. |
 | **RWKV7a DeepEmbed-v1 resident + CPU streaming** | **Done on CPU (July 15)** — native ChatRWKV `RWKV_DE_VERSION=1`, skeleton/provider row derivation, greedy parity for `"Hi"` under the shared prefill/decode contract. |
-| **Real small Mamba-2 reference** | **Done on CPU (July 15)** — 527,240-parameter local HF checkpoint, finite logits and exact cached decode parity. Reference harness only; no production backend claim. |
-| **Real small Transformer reference** | **Done on CPU (July 15)** — 1,032,272-parameter local Llama-style checkpoint, finite logits and cached decode parity. Reference harness only; no production backend claim. |
 | **qkv/DEA DeepEmbed CPU streaming** | **Done as a reference path (July 15)** — sidecar rows plus provider-loaded ordinary layers match the resident reference; fused production path remains open. |
 | **F1–F4 vs F5 gap** | **Closed for the native rwkv.cpp gate** — the current 0.1B and 2.9B cold/warm acceptance matrices meet the requested ratios and memory budgets. The older ChatRWKV/Python-dispatch figures in this historical table remain useful for explaining why the native layer-local path was required. |
 | M2.5 prefix state cache | **Done** |
@@ -214,9 +200,8 @@ See [`CHANGELOG.md`](../CHANGELOG.md) for full history.
 **DeepNVMe wins on GPU path:** GDS NVMe→VRAM (+10–37% vs bounce), bulk async layer fetch, `ds_nvme_tune` queue depth — see DNV-10 in. Irrelevant for strict LUT on CPU until decode is amortized.
 
 The following are intentionally not marked complete from this Windows
-CPU/iGPU run: CUDA/GDS, GPU-fused Mamba/attention/RWKV kernels, physical
-multi-SSD bandwidth scaling, large 2.9B/7B measurements, production-quality
-Mamba/Transformer backends, and large-model or quantizer training.
+CPU/iGPU run: CUDA/GDS, GPU-fused RWKV kernels, physical multi-SSD bandwidth
+scaling, large 2.9B/7B measurements, and large-model or quantizer training.
 
 ---
 
@@ -227,15 +212,10 @@ Mamba/Transformer backends, and large-model or quantizer training.
    promotion because its KL probe exceeded the configured gate.
 2. Continue profiling the native grouped-U8 GEMV, recurrent-state update, and
    vocabulary head so the compact CPU path improves without relaxing parity.
-3. Add real-checkpoint Mamba2/Transformer parity and batch coverage wherever
-   the corresponding model assets and optional dependencies are available.
-4. Add and qualify a Kimi-specific bounded layer/provider ABI before claiming
-   Kimi-K3 F1-F4 execution; the current resident CPU adapter is the usable
-   compatibility/reference path and keeps the explicit generic rejection.
-5. Keep the full CPU conformance, native CTest, F-tier, sequence-backend, Kimi,
-   and multiprocess HTTP checks in CI when their model/native assets are
+3. Keep the full CPU conformance, native CTest, F-tier, and multiprocess HTTP
+   checks in CI when their model/native assets are
    available.
-6. GPU, CUDA/GDS, Albatross, and physical multi-SSD scaling remain separate
+4. GPU, CUDA/GDS, Albatross, and physical multi-SSD scaling remain separate
    hardware-gated work and are outside the current CPU implementation scope.
 
 ---

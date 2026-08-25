@@ -5,12 +5,10 @@ This module contains the model-agnostic pieces from DSpark
 correction head, calibrated conditional-confidence inputs, hardware-aware
 prefix scheduling, and standard lossless speculative verification.
 
-The packed Transformer, Mamba, and RWKV backends intentionally do not enable
-these components by default.  A trained drafter/head and a target-verification
-loop are required before they can improve end-to-end latency.  The same
-interface accepts hidden states from a Transformer parallel block, a Mamba
-state-rolled block, or an RWKV recurrent block, which keeps the research path
-shared without pretending that recurrent backbones have parallel draft cost.
+The RWKV backends intentionally do not enable these components by default.
+A trained drafter/head and a target-verification loop are required before they
+can improve end-to-end latency. The research interface accepts hidden states
+from an RWKV recurrent block without pretending it has parallel draft cost.
 """
 
 from __future__ import annotations
@@ -131,7 +129,7 @@ class DSparkProposal:
     its cumulative product before scheduling a verification prefix.
     ``correction_state`` carries the final RNN-head state into a subsequent
     proposal block. It is correction-head state only, not a target
-    Transformer KV cache or Mamba/RWKV backbone state.
+    RWKV backbone state.
     """
 
     tokens: torch.Tensor
@@ -153,8 +151,7 @@ class DSparkDrafter(nn.Module):
     ``base_logits`` and ``hidden_states`` come from the model-specific
     parallel or state-rolled backbone and have shape ``[batch, steps, ...]``.
     The correction loop is intentionally tiny relative to a target model
-    forward.  It works unchanged for Transformer attention, Mamba, and RWKV;
-    only the source of the base block differs.
+    forward. Only the RWKV source of the base block is maintained here.
     """
 
     def __init__(

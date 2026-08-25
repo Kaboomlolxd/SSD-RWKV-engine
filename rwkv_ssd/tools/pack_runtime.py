@@ -364,69 +364,32 @@ def _write_manifest(
 def _layer_id_from_name(name: str) -> int:
     """Group a tensor name into a layer id for streaming-order layout.
 
-    Recognized families (in order):
+    Recognized families:
 
-    * HF transformers (Llama / Qwen2 / Mistral / etc.):
-        ``model.layers.{N}.*`` -> N
-        ``model.embed_tokens.*`` / ``model.norm.*`` -> 0
-        ``lm_head.*`` -> 9999
-        ``model.*`` (other, e.g. rotary buffers) -> 0
     * RWKV v5/v6/v7:
         ``blocks.{N}.*`` -> N
         ``emb.*`` / ``ln0.*`` / ``ln_out.*`` -> 0
         ``head.*`` -> 9999
-    * generic: any ``.<digit>.`` segment; embed/head fallbacks.
 
     Returned ids are stable, contiguous-ish, and the engine already
     treats -1 (misc) as a single shared group, 0 as "first / always
     resident" and 9999 as "always resident" — same convention used by
     the existing RWKV pipeline.
     """
-    # HF transformers: model.layers.N.*
-    # Kimi-K3 keeps the text tower under ``language_model.model``.  Preserve
-    # that prefix in the manifest even though the generic Transformer backend
-    # does not execute the hybrid KDA/MLA/MoE block yet; this lets load-time
-    # validation report a capability error instead of producing a malformed
-    # pack with all Kimi layer tensors assigned to the global bucket.
-    if ".layers." in name and name.startswith(
-        (
-            "model.layers.",
-            "model.model.layers.",
-            "language_model.model.layers.",
-            "model.language_model.model.layers.",
-        )
-    ):
-        try:
-            after = name.split(".layers.", 1)[1]
-            return int(after.split(".", 1)[0])
-        except (IndexError, ValueError):
-            pass
-    # RWKV: blocks.N.*
     if "blocks." in name:
         try:
             part = name.split("blocks.")[1].split(".")[0]
             return int(part)
         except (IndexError, ValueError):
             pass
-    # Generic: first purely-numeric path segment wins.
-    for part in name.replace(".", "_").split("_"):
-        if part.isdigit():
-            return int(part)
-    # Fallbacks — embed-like and head-like tensors.
+    # RWKV globals.
     lower = name.lower()
-    # RWKV globals (emb.weight is not caught by "embed" substring).
-    if name == "emb.weight" or name.startswith("emb."):
+    if name in {"emb.weight", "embed.weight"} or name.startswith(("emb.", "embed.")):
         return 0
     if name.startswith(("ln_out.", "ln0.")):
         return 0
-    if "embed" in lower or name.startswith(
-        ("model.embed_tokens.", "model.model.embed_tokens.")
-    ):
-        return 0
-    if lower.endswith("head.weight") or "lm_head" in lower or "output.weight" in lower:
+    if lower.endswith("head.weight") or name.startswith("head."):
         return 9999
-    if "norm" in lower or name.startswith(("model.norm.", "model.model.norm.")):
-        return 0
     return -1
 
 
@@ -437,49 +400,11 @@ def detect_model_family_from_state(
 
     Used to set a sensible default for ``manifest.model_family`` when
     the user did not pass ``--model-family``. Falls back to ``"unknown"``
-    (which downstream code treats as a generic backend).
+    so unsupported architectures are never presented as runnable packs.
     """
     if not state:
         return "unknown"
     keys = list(state.keys())
-    if any(
-        k.startswith("backbone.layers.") and ".mixer.in_proj.weight" in k
-        for k in keys
-    ):
-        return "mamba2"
-    # Kimi-K3 is a custom-code hybrid model.  Its text tower is nested below
-    # ``language_model.model`` and combines KDA linear attention, sparse MoE,
-    # and MLA full attention.  Detect it before the generic HF heuristics so
-    # callers never silently classify it as a Llama-like dense Transformer.
-    if any(
-        k.startswith(
-            (
-                "language_model.model.layers.",
-                "model.language_model.model.layers.",
-            )
-        )
-        for k in keys
-    ):
-        return "kimi_k3"
-    has_hf_layers = any(
-        ".layers." in k and (k.startswith("model.") or k.startswith("model.model."))
-        for k in keys
-    )
-    if has_hf_layers:
-        names = " ".join(keys)
-        if "qkv_proj" in names and "gate_proj" in names:
-            return "qwen2"  # fused QKV (no separate q_proj)
-        if "q_proj" in names and "gate_proj" in names:
-            if "q_norm" in names and "k_norm" in names:
-                return "qwen3"
-            if "sliding_window" in names:
-                return "mistral"
-            return "llama"  # generic HF dense transformer
-        if "self_attn" in names and "att.c_attn" in names:
-            return "gpt2"
-        if any(k.startswith("transformer.h.") for k in keys):
-            return "gpt2"
-            return "hf_transformer"
     if detect_deepembed_variant(state) is not None:
         return "rwkv7_deepembed"
     has_rwkv_blocks = any(k.startswith("blocks.") for k in keys)
@@ -814,9 +739,7 @@ def main() -> None:
     p.add_argument(
         "--model-family",
         default="auto",
-        help="Architecture family (default: auto-detect). Supported packed "
-        "families include rwkv5/rwkv6/rwkv7, mamba2, llama, mistral, "
-        "qwen2, qwen3, and gpt2-style transformers.",
+        help="RWKV architecture family (default: auto-detect; rwkv5/rwkv6/rwkv7).",
     )
     p.add_argument(
         "--pack-codec",

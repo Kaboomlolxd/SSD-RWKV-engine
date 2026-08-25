@@ -95,10 +95,6 @@ class MetricsCollector:
     cmix_hot_cache_hits: int = 0
     cmix_hot_cache_bytes: int = 0
     z_bytes: int = 0
-    mamba_state_bytes: int = 0
-    kv_cache_bytes: int = 0
-    sequence_context_tokens: int = 0
-    sequence_kernel: str = "torch"
     mtp_gate_open: int = 0
     cache_write_submits: int = 0
     cache_write_sync_ms: float = 0.0
@@ -216,10 +212,6 @@ class MetricsCollector:
         self.cmix_prefetch_bytes_submitted = 0
         self.cmix_hot_cache_hits = 0
         self.cmix_hot_cache_bytes = 0
-        self.mamba_state_bytes = 0
-        self.kv_cache_bytes = 0
-        self.sequence_context_tokens = 0
-        self.sequence_kernel = "torch"
         # Keep cache_write_* cumulative across calls (process-lifetime writers).
 
     def write_csv(self, path: str | Path) -> None:
@@ -318,8 +310,6 @@ class MetricsCollector:
             f"cmix_active={self.cmix_active_fraction:.3f} "
             f"cmix_samples={self.cmix_samples} "
             f"weight_cache={self.weight_cache_bytes}B{cache} "
-            f"mamba_state={self.mamba_state_bytes}B kv_cache={self.kv_cache_bytes}B "
-            f"context={self.sequence_context_tokens} "
             f"cache_writes={self.cache_write_submits} "
             f"cache_sync_ms={self.cache_write_sync_ms:.1f}"
             f"{prefill}"
@@ -380,10 +370,6 @@ class MetricsCollector:
             "cmix_hot_cache_hits": self.cmix_hot_cache_hits,
             "cmix_hot_cache_bytes": self.cmix_hot_cache_bytes,
             "z_bytes": self.z_bytes,
-            "mamba_state_bytes": self.mamba_state_bytes,
-            "kv_cache_bytes": self.kv_cache_bytes,
-            "sequence_context_tokens": self.sequence_context_tokens,
-            "sequence_kernel": self.sequence_kernel,
             "mtp_gate_open": self.mtp_gate_open,
             "cache_write_submits": self.cache_write_submits,
             "cache_write_sync_ms": round(self.cache_write_sync_ms, 3),

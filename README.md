@@ -149,8 +149,9 @@ See [`REPO_LAYOUT.md`](REPO_LAYOUT.md) for the compact file map and
 
 ## Validation
 
-The latest local CPU validation passed **601 tests**, with 12 skipped and 49
-deselected by repository markers. The gates include manifest path-security,
+The latest unrestricted local CPU validation passed **577 tests**, with 18
+skipped. The GitHub software selection passed **564 tests**, with 13 skipped
+and 18 deselected. The gates include manifest path-security,
 quality-certificate, preflight, serving, and incremental-stream tests. These
 results cover the local CPU/native environment only; they do not certify CUDA
 or another accelerator.

@@ -380,7 +380,7 @@ def count_tensors(state: dict[str, torch.Tensor]) -> dict[str, Any]:
 # ---- HF metadata bundle (config / tokenizer / generation) -------------------
 #
 # A "pack" that only has weights.bin is useless — the downstream
-# transformer backend needs config.json to instantiate the model
+# Preserve local model metadata for RWKV safetensors imports.
 # architecture, the tokenizer to encode/decode text, and the
 # generation_config for sane defaults. This block finds those files
 # in a HF directory, copies them next to weights.bin, and reports

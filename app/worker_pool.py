@@ -42,10 +42,6 @@ class WorkerCrashedError(WorkerPoolError):
 
 _LAYER_NAME_PATTERNS = (
     re.compile(r"^blocks\.\d+\."),
-    re.compile(r"^backbone\.layers\.\d+\."),
-    re.compile(r"^model\.layers\.\d+\."),
-    re.compile(r"^model\.model\.layers\.\d+\."),
-    re.compile(r"^transformer\.h\.\d+\."),
 )
 
 
@@ -120,9 +116,8 @@ def estimate_worker_memory(config: EngineConfig) -> tuple[int, str]:
                 for path in root.glob("weights*.bin")
                 if path.is_file()
             )
-            # Raw Hugging Face checkpoints (including Kimi-K3) have no
-            # manifest/weights.bin pair. Count safetensors so worker admission
-            # cannot silently under-estimate resident RSS.
+            # Raw safetensors checkpoints have no manifest/weights.bin pair.
+            # Count them so worker admission cannot under-estimate resident RSS.
             if file_bytes <= 0:
                 file_bytes = sum(
                     path.stat().st_size
@@ -133,25 +128,6 @@ def estimate_worker_memory(config: EngineConfig) -> tuple[int, str]:
             file_bytes = 0
         if file_bytes <= 0:
             return fixed_overhead + state_allowance, "fallback_process_overhead"
-        # A raw Kimi-K3 worker loads custom remote-code modules, two very large
-        # vocabulary projections, and a full resident CPU model.  On Windows
-        # the safetensors read working set remains materially above the final
-        # parameter byte count, so the generic 320 MiB overhead is unsafe for
-        # process-worker admission.  Keep this intentionally conservative;
-        # Kimi is resident-only and must never be admitted as a low-RAM stream.
-        raw_model_type = ""
-        try:
-            raw_config = json.loads((root / "config.json").read_text(encoding="utf-8"))
-            if isinstance(raw_config, dict):
-                raw_model_type = str(raw_config.get("model_type", "")).strip().lower()
-        except (OSError, ValueError, TypeError, json.JSONDecodeError):
-            pass
-        if str(config.backend).strip().lower() in {"kimi", "kimi_k3"} or raw_model_type in {
-            "kimi_k3",
-            "kimi_linear",
-        }:
-            kimi_overhead = 896 * 1024 * 1024
-            return int(file_bytes + kimi_overhead), "kimi_resident_safetensors_upper_bound"
         source = (
             "safetensors_file_fallback"
             if any(root.glob("*.safetensors"))

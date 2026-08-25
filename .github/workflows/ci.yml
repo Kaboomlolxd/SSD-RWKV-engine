@@ -54,7 +54,7 @@ jobs:
         run: >-
           python -m pytest -q --override-ini addopts="" --cache-clear
           tests/test_pack_verify.py tests/test_quality_certificate.py
-          tests/test_preflight.py tests/test_serve.py tests/test_kimi_k3.py
+          tests/test_preflight.py tests/test_serve.py
           --basetemp .pytest-tmp\ci-contracts
 
       - name: Run software-marked tests when their assets are available
@@ -72,7 +72,7 @@ jobs:
         run: >-
           python -m pytest -q --override-ini addopts="" --cache-clear
           tests/test_parity_conformance.py tests/test_worker_pool.py
-          tests/test_sequence_pack_backends.py tests/test_memory_usage.py
+          tests/test_memory_usage.py
           tests/test_sampling.py
           --basetemp .pytest-tmp\ci-runtime-contracts
 

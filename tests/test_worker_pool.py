@@ -79,44 +79,6 @@ def test_worker_count_uses_pack_footprint_when_no_budget_is_configured(
         validate_worker_count(config, 2)
 
 
-def test_raw_kimi_worker_estimate_is_conservative(tmp_path: Path) -> None:
-    model_dir = tmp_path / "kimi"
-    model_dir.mkdir()
-    (model_dir / "config.json").write_text(
-        json.dumps({"model_type": "kimi_k3"}), encoding="utf-8"
-    )
-    checkpoint = model_dir / "model.safetensors"
-    checkpoint.write_bytes(b"k" * (4 * 1024 * 1024))
-    config = EngineConfig(
-        pack_dir=model_dir,
-        backend="kimi_k3",
-        mode="resident",
-        device="cpu",
-    )
-    estimate, source = estimate_worker_memory(config)
-    assert source == "kimi_resident_safetensors_upper_bound"
-    assert estimate >= checkpoint.stat().st_size + 896 * 1024 * 1024
-
-
-def test_raw_hf_state_fingerprints_include_kimi_assets(tmp_path: Path) -> None:
-    model_dir = tmp_path / "kimi"
-    model_dir.mkdir()
-    (model_dir / "config.json").write_text(
-        json.dumps({"model_type": "kimi_k3", "vocab_size": 8}), encoding="utf-8"
-    )
-    (model_dir / "model.safetensors").write_bytes(b"weights")
-    (model_dir / "tiktoken.model").write_bytes(b"tokenizer-a")
-    (model_dir / "encoding_k3.py").write_text("version = 1", encoding="utf-8")
-    (model_dir / "tokenization_kimi.py").write_text("version = 1", encoding="utf-8")
-    model_a = model_fingerprint(model_dir)
-    tokenizer_a = tokenizer_fingerprint(model_dir)
-    (model_dir / "tiktoken.model").write_bytes(b"tokenizer-b")
-    assert model_fingerprint(model_dir) == model_a
-    assert tokenizer_fingerprint(model_dir) != tokenizer_a
-    (model_dir / "model.safetensors").write_bytes(b"weights-changed")
-    assert model_fingerprint(model_dir) != model_a
-
-
 def test_worker_ipc_message_carries_sampling_controls_without_engine_leak(
     synthetic_pack,
 ) -> None:

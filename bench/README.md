@@ -52,7 +52,6 @@ speedup without a separate end-to-end run.
 | Storage/layout | `bench_shard_simulation.py`, `bench_streaming_matrix.py` |
 | Context/state | `bench_context_frontier.py`, `bench_state_parking.py` |
 | Shadow/cache behavior | `bench_shadow_sel_quick.py`, `bench_io_ceiling.py` |
-| Sequence-model references | `bench_sequence_models.py` |
 
 ## Exploratory benches
 

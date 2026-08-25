@@ -50,9 +50,8 @@ python -m app.cli --model ./runtime_pack --backend rwkvcpp --mode resident
 behavior. `rwkvcpp` is the native CPU speed/format path and requires a
 matching GGML model. Synthetic is the fast, dependency-light regression path.
 
-Mamba, generic Transformer, and Kimi adapters are archival research code.
-They are not accepted by the backend factory, CLI, or HTTP service, and their
-historical benchmarks are not part of the maintained RWKV release contract.
+Obsolete non-RWKV adapters are no longer shipped. Historical benchmark records
+are not part of the maintained RWKV release contract.
 
 ## rwkv.cpp
 
@@ -258,13 +257,11 @@ adapter with a `DeepEmbed.bin` sidecar; it is not a fused rwkv.cpp backend.
 Use `--backend synthetic` for deterministic resident-vs-streaming tests and
 benchmark harness validation. It is not a language-model quality benchmark.
 
-### Archived sequence experiments
+### Removed experimental backends
 
-Mamba-2, generic Transformer/Llama, and Kimi adapters remain source-level
-research fixtures, but they are no longer exposed by the engine factory, CLI,
-or HTTP service. RWKV is the maintained runtime contract; this keeps the
-production capability matrix, state path, and CPU performance work focused on
-the SSD/F-tier pipeline.
+Obsolete generic sequence-model adapters were removed. RWKV is the maintained
+runtime contract, keeping the capability matrix, state path, and CPU
+performance work focused on the SSD/F-tier pipeline.
 
 ### Accelerators and external engines
 

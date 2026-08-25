@@ -11,7 +11,6 @@ from pathlib import Path
 import numpy as np
 
 from rwkv_ssd.runtime.snapshot import SnapshotMeta, load_snapshot, save_snapshot
-from rwkv_ssd.runtime.sequence_state import clone_sequence_state
 from rwkv_ssd.runtime.state_cache import RecurrentState, clone_rwkv7_state
 
 
@@ -27,8 +26,6 @@ def state_nbytes(state: RecurrentState) -> int:
         total += sum(t.numel() * t.element_size() for t in state.rwkv7_state)
     if state.external_state is not None:
         total += int(np.asarray(state.external_state).nbytes)
-    if state.sequence_state is not None:
-        total += state.sequence_state.nbytes()
     return total
 
 
@@ -46,7 +43,6 @@ def clone_recurrent_state(state: RecurrentState) -> RecurrentState:
             else None
         ),
         external_state=external,
-        sequence_state=clone_sequence_state(state.sequence_state),
     )
 
 

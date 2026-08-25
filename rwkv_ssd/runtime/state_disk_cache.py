@@ -115,40 +115,9 @@ class StateDiskCache:
             return RecurrentState(last_token_id=last_id, external_state=state)
         except (OSError, ValueError, struct.error):
             pass
-        # Sequence states use the versioned snapshot container.  Keep the
-        # legacy RSC/RSE readers above unchanged so existing RWKV prefix
-        # entries remain readable.
-        try:
-            from rwkv_ssd.runtime.snapshot import load_snapshot
-
-            restored, _meta = load_snapshot(path)
-            if restored.sequence_state is not None:
-                return restored
-        except (OSError, ValueError, RuntimeError, OverflowError, struct.error):
-            pass
         return None
 
     def store(self, prefix_key: str, state: RecurrentState) -> None:
-        if state.sequence_state is not None:
-            from rwkv_ssd.runtime.snapshot import SnapshotMeta, save_snapshot
-
-            target = _path_for(self._pack_dir, prefix_key)
-            self._dir.mkdir(parents=True, exist_ok=True)
-            save_snapshot(
-                target,
-                state,
-                SnapshotMeta(
-                    backend="sequence",
-                    mode="prefix_cache",
-                    model_family=state.sequence_state.kind,
-                    last_token_id=int(state.last_token_id),
-                    extras={
-                        "sequence_position": int(state.sequence_state.position),
-                        "sequence_context_limit": state.sequence_state.context_limit,
-                    },
-                ),
-            )
-            return
         if state.external_state is not None:
             arr = np.ascontiguousarray(np.asarray(state.external_state, dtype=np.float32))
             header = _EXTERNAL_MAGIC + struct.pack(

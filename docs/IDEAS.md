@@ -4,9 +4,7 @@ Prioritized for **SSD per-layer streaming during decode**, not re-building rwkv_
 
 **Status (July 15, 2026):** the non-hardware-gated CPU architecture slice is
 complete for the downloaded small checkpoints. RWKV7a DeepEmbed-v1 has native
-ChatRWKV resident support plus CPU layer streaming; real Mamba-2 and
-Transformer references have cached-state parity tests. These references are
-contracts and correctness tools, not production throughput backends.
+ChatRWKV resident support plus CPU layer streaming.
 
 
 **Plan summary (presets, measured vs modeled speedups):** [`PRESETS.md`](PRESETS.md) · [`THROUGHPUT_PLAN.md`](THROUGHPUT_PLAN.md) · **SSD research / stacks:** [`SSD_EXPLOITATION.md`](SSD_EXPLOITATION.md) · archived timelines in [`../archive/docs/planning/README.md`](../archive/docs/planning/README.md).
@@ -270,7 +268,7 @@ contracts and correctness tools, not production throughput backends.
  - Status: research primitive; not enabled in packed backends
  - Precondition: trained proposal/correction head, calibrated confidence, and a target verifier
  - Verify: exact acceptance rate, accepted tokens per verification sweep, and end-to-end tok/s
- - Adaptation: Transformer attention can draft a parallel block; Mamba and RWKV use the same correction/verifier interface while retaining state-rolled proposal cost
+ - Adaptation: RWKV uses a state-rolled proposal and exact target verification.
 
 ## P3 — only if P0–P1 are done
 
@@ -319,8 +317,8 @@ model.
 
 - Stacking thesis simulation “speedups” into one tok/s number.
 - **Weak / wrong-fit ideas from out-there sweep** — archived in [`archive/ideas/OUT_THERE_ARCHIVED.md`](../archive/ideas/OUT_THERE_ARCHIVED.md) (VcLLM/NVDEC, ngram decode cache, layer-only prefetch, etc.).
-- **Platform / GPU + bounded RAM:** · **LUT3/4 ladder:** 
-- Mamba / Transformer as first-class in this repo.
+- **Platform / GPU + bounded RAM:** · **LUT3/4 ladder:**
+- Additional model families as first-class runtimes.
 - Ouroboros, CSD in-storage scan, Engram Sector-Nine unless second product.
 - 50+ scripts in `simulations/` — not engine CI.
 - **`storage_bench/` (Rust io_uring)** — research artifact (Linux sequential ceiling); engine decode uses **mmap/pread/threaded**; future Linux overlap via io_uring prefetch, not third-party async seek+read wrappers.
@@ -366,10 +364,6 @@ Episodic memory with **three-tier hierarchy (HBM / DRAM / NVMe)** — see https:
   DeepEmbed-v1 is detected separately, uses upstream ChatRWKV's
   `RWKV_DE_VERSION=1`, keeps `s_emb`/`s_emb_x` in the pack, and passes
   resident/CPU-streaming greedy parity.
-- **Real small references:** `research/real_sequence_models.py` loads the
- local operator-supplied Mamba and Transformer fixtures
-  checkpoints without requiring `transformers`, `mamba_ssm`, or a tokenizer.
-  Fixed IDs are deliberate; tokenizer compatibility is not claimed.
 - **Exact chunked prefill:** ordinary RWKV-7 prompt prefill uses a layer-outer
   sequence schedule controlled by `RWKV_STREAM_PREFILL_CHUNK`.
 - **Next architecture work:** qkv/DEA batching, state-aware chunk scheduling,
@@ -377,8 +371,7 @@ Episodic memory with **three-tier hierarchy (HBM / DRAM / NVMe)** — see https:
   claim until optimized kernels and real model quality are measured.
 
 Hardware/training gates remain CUDA/GDS, GPU-fused kernels, physical multi-SSD
-scaling, large 2.9B/7B measurements, production Mamba/Transformer backends,
-and large-model or quantizer training.
+scaling, large 2.9B/7B measurements, and large-model or quantizer training.
 
 Detailed evidence and source links: [`RESEARCH_AND_ARCHITECTURE.md`](RESEARCH_AND_ARCHITECTURE.md).
 

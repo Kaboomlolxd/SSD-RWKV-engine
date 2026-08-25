@@ -16,7 +16,6 @@ import torch
 
 from rwkv_ssd.backends.chatrwkv import ChatRWKVBackend
 from rwkv_ssd.backends.factory import create_backend
-from rwkv_ssd.backends.kimi_k3 import KimiK3CPUBackend
 from rwkv_ssd.backends.pack_backend import PackBackend
 from rwkv_ssd.backends.rwkvcpp import RWKVCppBackend
 from rwkv_ssd.runtime.config import EngineConfig
@@ -202,12 +201,7 @@ class InferenceEngine:
                     "XPU matrix compute is unavailable; using CPU model compute "
                     "with XPU Trinity LUT decode."
                 )
-        # Kimi's hybrid model has two large vocabulary projections and a
-        # resident dtype-aware loader.  Let its backend choose a bounded
-        # intra/inter-op pool; the generic small-RWKV one-thread policy makes
-        # target-dtype checkpoint loading pathologically slow on Windows.
-        if not isinstance(self.backend, KimiK3CPUBackend):
-            _apply_cpu_thread_defaults(self._device)
+        _apply_cpu_thread_defaults(self._device)
         self._prefix_cache = (
             PrefixStateCache(
                 max_entries=config.prefix_cache_max_entries,
@@ -413,50 +407,6 @@ class InferenceEngine:
                 f"unsupported session_promotion_policy: "
                 f"{self.config.session_promotion_policy!r}"
             )
-
-        # Kimi-K3 is a raw Hugging Face hybrid KDA/MLA checkpoint, not a
-        # Trinity manifest. Keep it out of the generic Transformer/RWKV
-        # provider paths. The initial qualified path is resident CPU-only.
-        if isinstance(self.backend, KimiK3CPUBackend):
-            if self.config.mode != "resident":
-                raise CapabilityNotSupportedError(
-                    "layer_streaming",
-                    "kimi_k3",
-                    "Kimi-K3 currently has a resident CPU reference path only; "
-                    "a Kimi-specific bounded weight provider is not qualified yet",
-                )
-            self.backend.load(
-                str(self.config.pack_dir), self.config.strategy, str(self._device)
-            )
-            self._device = self.backend.device
-            self.metrics.cache_format = "resident"
-            self.metrics.sequence_kernel = "kimi_cpu_reference"
-            logger.info(
-                "loaded Kimi-K3 resident CPU reference backend from %s "
-                "(%d layers, vocab=%d)",
-                self.config.pack_dir,
-                self.backend.num_layers,
-                self.backend.vocab_size,
-            )
-            return
-
-        # Give a useful architectural error when a raw Kimi directory is
-        # accidentally supplied to the generic packed Transformer/rwkv.cpp
-        # selectors instead of failing later on a missing manifest.
-        raw_config_path = self.config.pack_dir / "config.json"
-        if not (self.config.pack_dir / "manifest.json").is_file() and raw_config_path.is_file():
-            try:
-                raw_config = json.loads(raw_config_path.read_text(encoding="utf-8"))
-            except (OSError, ValueError, TypeError, json.JSONDecodeError):
-                raw_config = {}
-            raw_model_type = str(raw_config.get("model_type", "")).strip().lower()
-            if raw_model_type in {"kimi_k3", "kimi_linear"}:
-                raise CapabilityNotSupportedError(
-                    "model_architecture",
-                    self.config.backend,
-                    "raw Kimi-K3 checkpoints require --backend kimi_k3 "
-                    "(resident CPU reference path); they are not generic Transformer/RWKV packs",
-                )
 
         resolved = resolve_trinity_pack(self.config.pack_dir)
         if resolved != self.config.pack_dir:
@@ -1371,19 +1321,7 @@ class InferenceEngine:
                 self.config.backend,
             )
 
-        if isinstance(self.backend, KimiK3CPUBackend):
-            token_ids = self.backend.generate_greedy_native(
-                prompt,
-                self.config.max_tokens,
-                metrics=self.metrics,
-                power_percent=int(self.config.power_percent),
-                temperature=float(self.config.temperature),
-                greedy=bool(self.config.greedy),
-                cancel_event=cancel_event,
-                deadline=deadline,
-            )
-            text = self.backend.decode_text(token_ids)
-        elif isinstance(self.backend, PackBackend):
+        if isinstance(self.backend, PackBackend):
             text = self._generate_pack(
                 prompt,
                 cancel_event=cancel_event,
@@ -1719,18 +1657,6 @@ class InferenceEngine:
         self.metrics.observe_memory(
             budget_bytes=int(float(self.config.ram_budget_gb or 0) * 1e9)
         )
-        if isinstance(self.backend, KimiK3CPUBackend):
-            return self.backend.generate_greedy_native(
-                prompt,
-                self.config.max_tokens,
-                metrics=self.metrics,
-                power_percent=int(self.config.power_percent),
-                temperature=float(self.config.temperature),
-                greedy=bool(self.config.greedy),
-                token_callback=token_callback,
-                cancel_event=cancel_event,
-                deadline=deadline,
-            )
         if isinstance(self.backend, PackBackend):
             return self._generate_pack_tokens(
                 prompt,
@@ -1936,22 +1862,6 @@ class InferenceEngine:
                 "generate_batch currently supports greedy decoding only; use "
                 "generate() per session for temperature sampling"
             )
-        if isinstance(self.backend, PackBackend):
-            from rwkv_ssd.backends.capabilities import backend_capabilities
-
-            # The sequence capability is intentionally explicit: Mamba owns a
-            # layer-stationary batch path, while Transformers defer batching.
-            # Legacy pack backends (notably SyntheticBackend) already expose
-            # their own batch implementation and must retain that contract.
-            if (
-                getattr(self.backend, "sequence_kind", "") == "transformer"
-                and not backend_capabilities(self.backend).supports_batch
-            ):
-                raise CapabilityNotSupportedError(
-                    "batching",
-                    self.config.backend,
-                    f"backend {self.config.backend!r} does not support weight-stationary batching"
-                )
         if not isinstance(self.backend, (PackBackend, ChatRWKVBackend)):
             raise CapabilityNotSupportedError(
                 "batching",
@@ -2147,18 +2057,6 @@ class InferenceEngine:
             )
             return self.backend.decode_text(token_ids)
         self.metrics.power_percent = int(self.config.power_percent)
-        if isinstance(self.backend, KimiK3CPUBackend):
-            token_ids = self.backend.generate_followup_native(
-                suffix,
-                n,
-                metrics=self.metrics,
-                temperature=float(self.config.temperature),
-                greedy=bool(self.config.greedy),
-                token_callback=token_callback,
-                cancel_event=cancel_event,
-                deadline=deadline,
-            )
-            return self.backend.decode_text(token_ids)
         if isinstance(self.backend, PackBackend):
             provider = self._get_or_create_pack_provider()
             merged = self.backend.prefill_text(
@@ -2348,19 +2246,6 @@ class InferenceEngine:
                 "no recurrent state to continue from — run generate() or load_snapshot() first"
             )
         self.metrics.power_percent = int(self.config.power_percent)
-        if isinstance(self.backend, KimiK3CPUBackend):
-            token_ids = self.backend.decode_greedy(
-                state,
-                None,
-                n,
-                self.metrics,
-                temperature=float(self.config.temperature),
-                greedy=bool(self.config.greedy),
-                token_callback=token_callback,
-                cancel_event=cancel_event,
-                deadline=deadline,
-            )
-            return self.backend.decode_text(token_ids)
         if isinstance(self.backend, PackBackend):
             provider = self._get_or_create_pack_provider()
             token_ids = self.backend.decode_greedy(
@@ -2750,20 +2635,6 @@ class InferenceEngine:
         self, prompt: str, *, cancel_event=None, deadline=None
     ) -> str:
         from rwkv_ssd.backends.rwkvcpp import RWKVCppBackend
-
-        if isinstance(self.backend, KimiK3CPUBackend):
-            token_ids = self.backend.generate_greedy_native(
-                prompt,
-                self.config.max_tokens,
-                metrics=self.metrics,
-                power_percent=int(self.config.power_percent),
-                temperature=float(self.config.temperature),
-                greedy=bool(self.config.greedy),
-                cancel_event=cancel_event,
-                deadline=deadline,
-            )
-            self.metrics.tokens_generated = len(token_ids)
-            return self.backend.decode_text(token_ids)
 
         if (
             isinstance(self.backend, ChatRWKVBackend)
