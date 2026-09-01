@@ -70,6 +70,17 @@ class ThreadedWeightStore(WeightStore):
         fn = getattr(self._inner, "advise_release", None)
         return bool(fn(entries)) if fn else False
 
+    def probably_resident(self, entries: list[TensorEntry]) -> bool:
+        """Preserve residency estimates through the async I/O wrapper.
+
+        ``RWKV_PAGE_RESIDENCY`` is commonly enabled around the selected I/O
+        backend.  Without this delegation, wrapping an observed mmap/pread
+        store in ``threaded`` silently turns every estimate into the base
+        class's conservative ``False`` and causes redundant OS prefetch hints.
+        """
+        fn = getattr(self._inner, "probably_resident", None)
+        return bool(fn(entries)) if fn else False
+
     def close(self) -> None:
         self._executor.shutdown(wait=True, cancel_futures=True)
         self._inner.close()

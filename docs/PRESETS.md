@@ -124,9 +124,19 @@ small dense controls, while the provider uploads grouped records for block
 matrices, embedding, and head. `RWKVCPP_NATIVE_U8=0` forces the ordinary dense
 bridge for A/B tests.
 
+The bounded native layer path keeps the vocabulary head dense by default because
+the measured FP32 BLAS projection is faster on the current CPU (about 21.6 ms
+versus 34.4 ms for the packed head in the 2.9B probe). Set
+`RWKVCPP_NATIVE_LAYER_PACKED_HEAD=1` only when avoiding dense head materialization
+is more important than head-projection speed. The packed option is shape-checked,
+keeps the provider-backed blob alive until backend close, and falls back to the
+dense head when no valid packed blob is available.
+
 The first bridge keeps the converted `.bin` graph resident; provider/cache,
 prefetch, shadow, disk-cache, prefix-state, and F1–F5 semantics are shared.
-Selective ggml weight slots remain a separate RAM-reduction follow-up.
+The optional `RWKV_GGML_SLOT_COUNT`/`RWKV_GGML_SLOT_BYTES` pair now provides a
+bounded native upload arena when the loaded rwkv.cpp ABI exposes slot support;
+older libraries retain the legacy upload path.
 
 Compare backends now:
 
@@ -179,6 +189,7 @@ Bench: `python bench/bench_io_ceiling.py --max-tokens 24 --samples 2`
 | `RWKV_LUT_ACTIVATION_INT8_HEAD` | `0` / `1` | Experimental INT8 activation quantization for the vocabulary head; independently gated because head perturbations can change argmax |
 | `RWKVCPP_NATIVE_U8` | `auto` / `0` / `1` | Enable the CPU-native rwkv.cpp SG8 grouped-U8 graph for non-resident grouped matrix packs; `0` forces dense GGML uploads |
 | `RWKVCPP_NATIVE_U8_PACKED_ONLY` | `auto` / `0` / `1` | Omit dense 2-D matrix payloads from the native GGML skeleton; use `1` only for an all-grouped matrix manifest |
+| `RWKVCPP_NATIVE_LAYER_PACKED_HEAD` | `auto` / `0` / `1` | Keep the bounded native layer path's vocabulary head packed to save RAM; opt-in because the measured packed GEMV is slower than dense BLAS |
 | `RWKV_STREAM_FUSED_PREFILL_MIN_TOKENS` | positive integer | Use the fused token path for prompts shorter than this threshold (default 8) |
 | `RWKV_PIN_ACCURACY_LAYERS` | `auto` / `0` / `1` | Auto-pin first+last block when `max_z≥3`; F2 defaults `0` |
 | `RWKV_TRINITY_CODEBOOK` | `linspace` / `kmeans` | Pack-time codebook. `kmeans` (default) is +18 dB SNR vs `linspace` but ~3000× slower on 2560×2560 — use `--trinity-codebook linspace` for fast 2.9B+ packs |
@@ -302,5 +313,5 @@ RAM-budget selection, and prefix state snapshots are synchronized into the
 native ggml graph through `GgmlWeightBridge`. F5/provider-cache layers upload
 once and reuse their native tensors; strict F1 re-uploads layers as the
 provider evicts them. The first bridge version keeps the native `.bin` graph
-resident, preserving ggml speed while the selective ggml-slot loader is
-developed separately.
+resident, preserving ggml speed while the optional selective ggml-slot arena
+reduces transient upload memory when its ABI is available.

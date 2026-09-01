@@ -34,6 +34,17 @@ The current source-backed recommendation is in
 The full evaluation and remediation record is
 [`docs/ENGINE_EVALUATION_REPORT.md`](docs/ENGINE_EVALUATION_REPORT.md).
 
+The current CPU continuation has measured, opt-in-safe fast paths rather than
+stacked headline multipliers: grouped-U8 decode is **5.05×** faster and grouped
+LUT2 decode **4.63×** faster in focused A/B probes; DeepEmbed sidecar lookup is
+approximately **19×–1,202×** faster depending on access pattern; and the
+shared-layer DeepEmbed reference batch path is **1.17×** faster with **50% fewer
+layer loads** in the maintained two-session probe. Native sequence prefill
+reuses its scratch buffers, uninterrupted generation elides intermediate state
+publication, and whole-pack zstd is available for cold storage but remains
+opt-in because raw mmap is faster on hot reads. Run
+`bench/bench_cpu_optimizations.py` for the focused probes.
+
 ## Quick start
 
 Install the package with the development dependencies:
@@ -149,7 +160,7 @@ See [`REPO_LAYOUT.md`](REPO_LAYOUT.md) for the compact file map and
 
 ## Validation
 
-The latest unrestricted local CPU validation passed **577 tests**, with 18
+The latest unrestricted local CPU validation passed **600 tests**, with 18
 skipped. The GitHub software selection passed **564 tests**, with 13 skipped
 and 18 deselected. The gates include manifest path-security,
 quality-certificate, preflight, serving, and incremental-stream tests. These

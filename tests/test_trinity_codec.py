@@ -9,6 +9,7 @@ import torch
 from rwkv_ssd.runtime.manifest import TensorEntry
 from rwkv_ssd.runtime.trinity_codec import (
     decode_trinity_lut2_to_bytes,
+    decode_trinity_lut2_to_tensor,
     decode_trinity_to_bytes,
     encode_trinity,
     encode_trinity_lut2,
@@ -44,6 +45,32 @@ def test_trinity_lut2_roundtrip_bfloat16() -> None:
     # Lossy — should be close, not bitwise identical.
     diff = (out.float() - t.float()).abs().mean()
     assert diff < 0.75
+
+
+def test_hadamard_kmeans_roundtrip_and_length() -> None:
+    torch.manual_seed(11)
+    tensor = torch.randn(7, 6, dtype=torch.float32)
+    raw = encode_trinity_lut2(tensor, codebook="hadamard_kmeans")
+    expected = packed_length_trinity_lut2(
+        tensor.numel(), codebook="hadamard_kmeans", shape=list(tensor.shape)
+    )
+    assert len(raw) == expected
+    assert raw[:4] == b"TR2\x08"
+    entry = TensorEntry(
+        "blocks.0.weight",
+        0,
+        "float32",
+        list(tensor.shape),
+        0,
+        len(raw),
+        4096,
+        "streamed",
+        dequant="trinity_lut2",
+    )
+    out = decode_trinity_lut2_to_tensor(raw, entry, torch.device("cpu"))
+    assert out.shape == tensor.shape
+    assert torch.isfinite(out).all()
+    assert torch.mean((out - tensor) ** 2) < 1.0
 
 
 def test_trinity_zlib_roundtrip() -> None:

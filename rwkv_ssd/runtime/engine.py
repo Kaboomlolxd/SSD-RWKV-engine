@@ -1862,7 +1862,9 @@ class InferenceEngine:
                 "generate_batch currently supports greedy decoding only; use "
                 "generate() per session for temperature sampling"
             )
-        if not isinstance(self.backend, (PackBackend, ChatRWKVBackend)):
+        if not isinstance(
+            self.backend, (PackBackend, ChatRWKVBackend, RWKVCppBackend)
+        ):
             raise CapabilityNotSupportedError(
                 "batching",
                 self.config.backend,
@@ -1874,14 +1876,35 @@ class InferenceEngine:
             self._prompt_token_count(prompt) for prompt in prompts
         )
         self.metrics.power_percent = int(self.config.power_percent)
-        provider = self._get_or_create_pack_provider() if isinstance(self.backend, PackBackend) else self._get_or_create_streaming_provider(model_z=self.backend._model.z)
+        if isinstance(self.backend, PackBackend):
+            provider = self._get_or_create_pack_provider()
+        else:
+            model_z = (
+                self.backend._model.z
+                if isinstance(self.backend, ChatRWKVBackend)
+                else None
+            )
+            provider = self._get_or_create_streaming_provider(
+                model_z=model_z
+            )
         started = time.perf_counter()
         count = int(max_tokens if max_tokens is not None else self.config.max_tokens)
         if isinstance(self.backend, PackBackend):
             token_batches = self.backend.generate_greedy_batch(prompts, provider, count, self.metrics)
-        else:
+        elif isinstance(self.backend, ChatRWKVBackend):
             assert self.manifest is not None
             token_batches = self.backend.generate_greedy_batch_streaming(prompts, count, provider, self.manifest.by_layer(), manifest_block_layers(self.manifest), self.metrics)
+        else:
+            assert isinstance(self.backend, RWKVCppBackend)
+            assert self.manifest is not None
+            token_batches = self.backend.generate_greedy_batch_streaming(
+                prompts,
+                count,
+                provider,
+                self.manifest.by_layer(),
+                manifest_block_layers(self.manifest),
+                self.metrics,
+            )
         self.metrics.total_wall_s = time.perf_counter() - started
         self.metrics.observe_memory(
             budget_bytes=int(float(self.config.ram_budget_gb or 0) * 1e9)

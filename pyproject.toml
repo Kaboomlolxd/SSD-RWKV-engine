@@ -17,6 +17,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]
 hf = ["huggingface_hub>=0.20.0"]
+zstd = ["zstandard>=0.22.0"]
 
 [project.scripts]
 rwkv-ssd = "app.cli:main"

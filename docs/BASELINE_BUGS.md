@@ -283,7 +283,7 @@ forces pins.
 
 | # | Where | Why | Status |
 |---|-------|-----|--------|
-| A | F1-F4 staging 23-45 ms/tok | P1.4 packed block forward **shipped** (CHANGELOG F-1). New early-exit path in `forward_one_streaming` calls `forward_block_packed` directly when fused LUT is active and att weights are NOT in `z` — skips per-tensor `inject_layer_into_z`. F1 60.6→43.9 ms/tok, F3 42.3→33.8 ms/tok. Bigger reduction is gated on CUDA graphs (M6e) to drop the Python dispatch cost. | **partial** |
+| A | F1-F4 staging 23-45 ms/tok | P1.4 packed block forward **shipped for the supported CPU fused-pack path** (CHANGELOG F-1). New early-exit path in `forward_one_streaming` calls `forward_block_packed` directly when fused LUT is active and att weights are NOT in `z` — skips per-tensor `inject_layer_into_z`. F1 60.6→43.9 ms/tok, F3 42.3→33.8 ms/tok. Remaining Python dispatch cost did not show a further safe CPU promotion; the larger next reduction is CUDA graphs (M6e). | **closed for current CPU scope** |
 | B | F4 = 2.15 tok/s (worse than F3) | **Closed (F-2).** v7 bench has F4=3.19 ≈ F3=3.15. The v6 "2.15" was a single noisy run with higher compute from the strict-fused retain path; F3t is the new Pareto-best at the ~262 MB tier. | **done** |
 | C | Fb = 0.40 tok/s | **Closed (F-4).** `apply_ram_budget_tier` for F5 sets `warm_z=True` + stamps `_ram_budget_tier_applied`; `apply_ram_budget_to_config` respects the flag. Fb is now 6.43 tok/s (86% of F6, 91% of F5). | **done** |
 | D | F6 bridge_pct=100% | **Closed (F-5).** `engine._generate_resident` passes `self.metrics` to `generate_greedy_native(..., metrics=…)`. F6 row now reports `compute_ms_per_token=265.62` and `bridge_pct=0.0`. | **done** |

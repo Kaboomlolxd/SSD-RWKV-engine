@@ -792,7 +792,13 @@ class ManifestWeightProvider(WeightProvider):
         else:
             stable = bytes(blob)
         self._fused_lut_blobs[entry.name] = (stable, out_f, in_f)
-        self._touch_packed_layer(entry.layer_id)
+        # Global packed matrices (currently the vocabulary head, layer 9999)
+        # are explicitly retained once selected and are not part of the
+        # evictable block-layer packed LRU.  Otherwise a small packed-cache cap
+        # could evict the head while the native layer backend still holds its
+        # view, making the memory policy both surprising and unauditable.
+        if entry.layer_id < 9000:
+            self._touch_packed_layer(entry.layer_id)
 
     def _register_fused_transposed_lut_blobs(
         self,

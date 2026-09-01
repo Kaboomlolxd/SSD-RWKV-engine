@@ -2,29 +2,39 @@
 
 Prioritized for **SSD per-layer streaming during decode**, not re-building rwkv_lightning / web-rwkv / RWKV-Infer.
 
-**Status (July 15, 2026):** the non-hardware-gated CPU architecture slice is
-complete for the downloaded small checkpoints. RWKV7a DeepEmbed-v1 has native
-ChatRWKV resident support plus CPU layer streaming.
+**Status (September 1, 2026):** the non-hardware-gated CPU implementation
+surface is complete for the supported downloaded checkpoints. RWKV7a
+DeepEmbed-v1 has native ChatRWKV resident support plus CPU layer streaming.
+qkv/DEA DeepEmbed has an optimized sidecar-backed CPU reference stream and
+shared-layer prompt-prefill/decode batch paths. A native fused qkv/DEA kernel
+and broad quality qualification remain separate follow-up gates, not missing
+CPU runtime plumbing.
 
 
 **Plan summary (presets, measured vs modeled speedups):** [`PRESETS.md`](PRESETS.md) · [`THROUGHPUT_PLAN.md`](THROUGHPUT_PLAN.md) · **SSD research / stacks:** [`SSD_EXPLOITATION.md`](SSD_EXPLOITATION.md) · archived timelines in [`../archive/docs/planning/README.md`](../archive/docs/planning/README.md).
 
 ## P0 — required for “it works”
 
-1. **Per-layer weight injection (ChatRWKV)** — stream `weights.bin` slice into block parameters each forward.
-2. **Golden test** — `resident` vs `streaming` greedy tokens identical on one small RWKV-7.
-3. **Prefetch layer N+1** while computing layer N (ping-pong already scaffolded).
+1. **Per-layer weight injection (ChatRWKV)** — **done** — stream a `weights.bin`
+   slice into block parameters each forward.
+2. **Golden test** — **done** — `resident` vs `streaming` greedy tokens are
+   identical on the qualified small RWKV-7 fixture.
+3. **Prefetch layer N+1** while computing layer N — **done** — layer-aware and
+   gate-based schedulers use the existing ping-pong path.
 4. **`pread` + optional `madvise`** — **Done (v0.5.5):** `--io-backend pread|threaded`; `MADV_WILLNEED`/`DONTNEED` on Linux (`--no-mmap-willneed`, `--mmap-dontneed`).
-5. **Artifact verify at startup** — checksum manifest, fail fast on corruption.
-6. **HuggingFace source ingestion** — `meta.json` records HF repo ID; `pack_runtime` accepts `--hf-repo` / snapshot path.
+5. **Artifact verify at startup** — **done** — checksum manifest and fail-fast
+   validation are enforced by pack verification/preflight.
+6. **HuggingFace source ingestion** — **done** — `meta.json` records the HF
+   repo ID; `pack_runtime` accepts `--hf-repo` / snapshot paths.
 7. **Cross-platform async I/O** — **Done (v0.5.4):** `--io-backend mmap|pread|threaded`. ayafileio evaluated and **rejected** for decode (random offset reads ~25× slower than mmap on Windows). Linux next: `madvise(MADV_WILLNEED)` + io_uring prefetch thread.
-8. **Prefix / state cache** — repeated system prompts skip prefill SSD work; **RWKV-Infer** and **rwkv_lightning** already ship this — biggest TTFT win in serving; prototype early (see M2.5).
+8. **Prefix / state cache** — **done** — repeated system prompts can skip
+   prefill SSD work; session snapshots separately support resume.
 
-> **Engine status (June 27, 2026):** V1 streaming, Trinity overhead P0/P1, fused presets, M7 HTTP, per-tensor codec routing (`--codec-map`), `build_decode_cache` tool, RAM budget auto-profile, `RWKV_CODEC_POLICY` runtime router, **Trinity LUT2 K-means codebook** (+20 dB SNR vs legacy linspace; Hadamard+kmeans helper module ready for next codec pass). **F1-F5 baseline bug sweep** shipped (7 bugs, see [`BASELINE_BUGS.md`](BASELINE_BUGS.md)) — F5 = 9.01 tok/s, F5 ≥ F6 for the first time on the dev machine. **M6 GPU track** (M6a–c: Albatross, FLUTE CUDA, GDS) is **primary tok/s** path; dev on Intel iGPU + CPU forward. See [`MILESTONE_STATUS.md`](MILESTONE_STATUS.md).
+> **Engine status (June 27, 2026):** V1 streaming, Trinity overhead P0/P1, fused presets, M7 HTTP, per-tensor codec routing (`--codec-map`), `build_decode_cache` tool, RAM budget auto-profile, `RWKV_CODEC_POLICY` runtime router, **Trinity LUT2 K-means codebook** (+20 dB SNR vs legacy linspace), and an opt-in CPU-only Hadamard+kmeans blob format. **F1-F5 baseline bug sweep** shipped (7 bugs, see [`BASELINE_BUGS.md`](BASELINE_BUGS.md)) — F5 = 9.01 tok/s, F5 ≥ F6 for the first time on the dev machine. **M6 GPU track** (M6a–c: Albatross, FLUTE CUDA, GDS) is **primary tok/s** path; dev on Intel iGPU + CPU forward. See [`MILESTONE_STATUS.md`](MILESTONE_STATUS.md).
 >
 > **F1-F3 calibration note:** the F1 (0.15 GB) / F2 (0.21 GB) / F3 (0.5 GB) `ram_budget_gb` tiers are designed for 7B+ models where the resident set is a small fraction of the full pack. On 0.1B (full skeleton ~201 MB) the planner throttles `max_provider_cache_bytes` aggressively and streaming tok/s drops well below F4/F5. `scripts/bench_tok_s.py` skips F1-F3 on 0.1B and uses F4 (`max_z=2`) / F5 (`RWKV_PROMOTE_FULL_Z=1`) for the streaming comparison. The decision tree in `PRESETS.md` documents the full mapping.
 
-> **F1-F5 open work (post June 27, 2026 sweep):** measured warm on 0.1B —
+> **Historical F1-F5 open work (post June 27, 2026 sweep):** measured warm on 0.1B —
 > F1 2.77 / F2 3.09 / F3 3.49 / F4 2.15 / F5 9.01 / F6 3.98 tok/s. F1-F4
 > staging 23-45 ms/tok is the bottleneck. Open work: (1) P1.4 packed block
 > forward that doesn't need per-tensor bf16 inject — would close the F1-F4
@@ -105,10 +115,19 @@ ChatRWKV resident support plus CPU layer streaming.
 
 ## P1 — product quality
 
-9. **Albatross `faster3a_2605`** — pin this variant after M3; **`rwkv_lightning`** is the higher-level alternative (batch + cache + HTTP bundled).
-10. **Residency profiles** — JSON: which layers/tensors stay resident vs streamed; cross-reference P0 state cache (cache = prompt prefix, residency = which weights never leave disk).
-11. **Quantization ladder (comparison, not one codec)** — span **rwkv.cpp** Q4_1/Q5_K, **web-rwkv** NF4/INT8, **RWKV-Infer** HQQ4, **rwkv_lightning** FP8/INT8/FP6/FP5/HQQ4; dense FP16/BF16 remains the quality reference while grouped-U8 is the compact default direction (see M5).
-12. **HTTP streaming API** — **rwkv_lightning** already has OpenAI-compatible + `/big_batch` + state endpoints; **borrow or wrap**, don’t greenfield unless SSD stream forces it. **web-rwkv** has a runtime API reference too.
+9. **Albatross `faster3a_2605`** — **hardware-gated**; keep the adapter boundary
+   documented and qualify only on a CUDA host. **`rwkv_lightning`** remains the
+   higher-level alternative (batch + cache + HTTP bundled).
+10. **Residency profiles** — **done on CPU** — JSON profiles describe which
+    layers/tensors stay resident versus stream, with cache and residency kept
+    as separate concepts.
+11. **Quantization ladder (comparison, not one codec)** — **done as a CPU
+    evaluation surface** — rwkv.cpp references, grouped-U8, scale-U8/U4, and
+    Trinity variants are measurable; dense FP16/BF16 remains the quality
+    reference and no single lossy codec is a blanket guarantee.
+12. **HTTP streaming API** — **done for the local CPU service boundary** —
+    `/generate`, health, metrics, bounded admission, auth hooks, cancellation,
+    and worker handling are implemented; internet-facing hardening is separate.
 13. **State snapshot API** — save/load recurrent state blob for session resume (engine API; distinct from prefix cache).
  - Status: **done (Unreleased)** — `rwkv_ssd.runtime.snapshot` (single-file `RWS\x01` format with engine config + payload + sha256); `engine.save_snapshot(path, prompt=…)` / `load_snapshot(path)` / `from_snapshot(path, pack_dir)`; CLI `--save-snapshot` / `--load-snapshot`. Tests: `tests/test_state_snapshot.py` (7).
 14. **LoRA adapter slots** — small resident deltas + streamed base.
@@ -139,7 +158,7 @@ ChatRWKV resident support plus CPU layer streaming.
  - No-stack: default over `ssd_speculative_prefetch_bench.py` (thesis A5 #2)
 - **SSM speculation cache (compact state trajectory)**
  - From thesis: `simulations/benches/ssm_speculation_cache_bench.py`; thesis A5 #3
- - Status: inspired
+ - Status: **deferred — no concrete local state-trajectory contract**
  - Precondition: recurrent-model state serializer
  - Verify: hit rate × state-size cost
  - No-stack: preferred over `ssd_speculative_prefetch_bench.py` for recurrent models
@@ -150,25 +169,27 @@ ChatRWKV resident support plus CPU layer streaming.
 
 - **NAND channel-aligned I/O layout (sector packing, channel alignment)**
  - From thesis: Ch.16 (channel-aligned I/O); Appendix B “New idea”
- - Status: new-idea
+ - Status: **done as a CPU pack-layout path**; actual NAND-channel gains remain
+   storage-device qualification
  - Precondition: SSD geometry profile in `pack_runtime`
  - Verify: `bench/bench_io.py` MB/s delta vs current mmap layout
  - No-stack: alternative to current `weights.bin` layout, not additive
 - **Adaptive precision / multi-bitwidth runtime switching**
  - From thesis: Ch.16; `simulations/benches/temporal_weight_locality_bench.py`
- - Status: inspired
+  - Status: **done as pack/runtime codec routing**; per-token adaptive switching remains research-only
  - Precondition: multi-bitwidth pack variants in M5 ladder
  - Verify: per-token quality hit vs bandwidth win
  - No-stack: mutually exclusive with P1 #11 codec choice per layer (router)
 - **Compression path comparison (M5 evaluation)**
  - From thesis: `simulations/benches/compression_path_comparison_bench.py`; Ch.6
- - Status: inspired; outcome decides codec
+  - Status: **done as a CPU evaluation path**; outcome is recorded in the current codec/quality gates
  - Precondition: M5 ladder operational
  - Verify: size + latency + quality table; pick one
  - No-stack: replaces the codec choice, does not stack
 - **Compression Trinity (thesis baseline codec stack)**
  - From thesis: Ch.6; `simulations/benches/compression_trinity_bench.py`
- - Status: thesis-defended; **not on engine path** until afternoon experiment passes (see below)
+ - Status: **done as an opt-in CPU/reference codec**; the local overhead gate
+   rejects it as the default hot path (see below)
  - Precondition: same gate as Compression Trinity experiment
  - Verify: storage ratio + dequant overhead vs borrowed codecs
  - No-stack: one of the P2.b choices, not additive with rwkv_lightning FP5 / HQQ4 packs
@@ -177,18 +198,18 @@ ChatRWKV resident support plus CPU layer streaming.
 
 - **Heterogeneous chunk schedule (uniform-K vs 128 KiB vs hybrid)**
  - From thesis: `simulations/benches/heterogeneous_chunk_schedule_bench.py`; thesis A5 #13
- - Status: new-idea
+  - Status: **done as a CPU adaptive layer-size policy** (`uniform` vs `layer_size`/`heterogeneous`)
  - Precondition: scheduler that picks policy per layer
  - Verify: same CSV, two policies side by side
  - No-stack: alternative to fixed K, not additive
 - **Hot-layer pinning**
  - From thesis: n/a (engine-specific)
- - Status: engine-specific; residency profiles (P1 #10) are the hook
+  - Status: **done as CPU residency profiles plus adaptive retiering**; physical-drive validation remains deployment work
  - Precondition: metrics CSV with bubble pattern
  - Verify: RSS saved + tok/s delta
 - **Second NVMe / striped read**
  - From thesis: Ch.11
- - Status: inspired
+  - Status: **done as a CPU sharded/striped normal-file path**; aggregate physical multi-SSD scaling remains hardware-gated
  - Verify: `bench/bench_io.py` MB/s scaling with drive count
 - **NUMA-aware I/O threads**
  - From thesis: Ch.11; `simulations/benches/numa_topology_bench.py`
@@ -196,15 +217,19 @@ ChatRWKV resident support plus CPU layer streaming.
  - Verify: inter-socket fabric cost
 - **Micro-batching**
  - From thesis: Ch.5
- - Status: **real ChatRWKV CPU implementation (July 12, 2026)** — dense
-   layer-outer/session-inner decode through `InferenceEngine.generate_batch()`;
-  synthetic path also retained. rwkv.cpp has a provider bridge and native
-  weight-stationary path; shared-sweep batching and long real-model quality
-  certification remain open.
+ - Status: **real CPU implementation (July 12–September 1, 2026)** — dense
+  layer-outer/session-inner prefill/decode through `InferenceEngine.generate_batch()`;
+  qkv/DEA DeepEmbed also has shared-layer prompt prefill and decode reference
+  paths. Synthetic path is retained. rwkv.cpp now has a native
+  layer-outer/session-inner shared prefill/decode sweep as well. Long real-model quality
+   certification remains open.
  - Verify: exact greedy parity passed at B=2. Clean 0.1B/8-token diagnostic
    improved aggregate end-to-end throughput 1.12→1.89 tok/s and aggregate
    decode-only throughput 1.37→2.75 tok/s; per-session latency stayed about
-   0.73 s/token. Continue with B=1..N and longer repeated workloads.
+   0.73 s/token. The native rwkv.cpp 0.1B two-session/four-token warm probe
+   matched independent output. Repeatable local runs measured 2.67–3.27
+   aggregate tok/s versus 1.34–1.60 tok/s independently. Continue with B=1..N and longer repeated
+   workloads.
  - Scope: capacity win, not single-session latency or physical-SSD evidence;
    short requests remain prefill-bound.
 - **Concurrent model loading (cold start)**
@@ -227,7 +252,7 @@ ChatRWKV resident support plus CPU layer streaming.
 
 - **Hedged reads on mirrored layout**
  - From thesis: Ch.14
- - Status: inspired
+  - Status: **done as an opt-in CPU dual-read primitive**; mirrored-device p99/read-amplification qualification remains deployment work
  - Precondition: RAID-1/10
  - Verify: p99 latency vs read-amp
 - **S.M.A.R.T.-aware scheduling**
@@ -258,7 +283,8 @@ ChatRWKV resident support plus CPU layer streaming.
  - No-stack: throughput transform on decode loop, not byte multiplier
 - **N-gram weight cache (prefill-time only)**
  - From thesis: `simulations/benches/ngram_weight_cache_bench.py`; Appendix B
- - Status: new-idea
+ - Status: **done as an opt-in prefill cache** — workload-gated; do not count it
+   as a decode multiplier.
  - Precondition: token-pattern reuse in workload
  - Verify: cache hit rate × RSS
  - No-stack: prefill-only; do not multiply onto decode tok/s
@@ -294,17 +320,19 @@ The K-means codebook is **+18.1 dB SNR / 9× lower RMSE / +0.58 cos sim** on rea
 |-----------|------------------------------|--------|------|
 | **K-means (shipped v0.6.16)** | 0 dB baseline (+7.3 dB abs) | done | IDEAS S2 |
 | Per-row K-means | -1 to +1 dB on small matmuls, more on big | done (script) | IDEAS S3 |
-| Hadamard + K-means (QuIP#) | +1-2 dB on RWKV, +5-8 dB on LLM | 1 week (rotation in encode/decode) | [QuIP#](https://arxiv.org/abs/2402.04396) |
+| Hadamard + K-means (QuIP#) | +1-2 dB on RWKV, +5-8 dB on LLM | **implemented, opt-in CPU research path**; local CPU decode/storage gate failed | [QuIP#](https://arxiv.org/abs/2402.04396) |
 | 2:4 structured sparsity | halves the bit-stream to 1 bit/w (16×) | 2-3 weeks (Marlin-style CPU kernel) | [Marlin](https://arxiv.org/abs/2406.09994) |
 | AQLM learned additive codebooks | +0.5-3 dB on LLM, training pass required | 2-4 weeks (calibration step) | [AQLM](https://arxiv.org/abs/2401.06118) |
 | QTIP trellis coded quant | 2-bit QTIP ≈ 4-bit GPTQ on Llama-2-7B | 1-2 weeks (trellis state, custom kernel) | [QTIP](https://arxiv.org/abs/2406.11235) |
 | BitNet b1.58 (ternary, from-scratch) | 1.58 bits, FP16 parity at 3B+ | training, not PTQ | [BitNet b1.58](https://arxiv.org/abs/2402.17764) |
 
-**Hadamard + K-means** is the right next step for a 1-week effort: it adds ~5-8 dB
-SNR on real LLM weight distributions (per QuIP#) and only adds the rotation
-multiplication on encode and the inverse on decode. The codec module
-(`trinity_codebook.py`) is already wired; only the `encode_trinity_lut2`
-function needs the rotation step added.
+**Hadamard + K-means** is now implemented as an explicit `TR2\x08` CPU format
+with a matrix-free transform and a reversible seed/width header. It remains
+research-only: the local 768×768 A/B gained about 1 dB SNR, but the padded
+non-power-of-two width grew storage by 33% and inverse rotation made decode
+roughly 70× slower. It should be reconsidered only with a fused native kernel
+or a workload where quality is worth that overhead; it is not part of the
+default CPU codec policy.
 
 **Per-row K-means** is also implemented in the comparison script
 (`--with-per-row`) and gives marginal SNR improvement on the 0.1B att weights
@@ -323,7 +351,7 @@ model.
 - 50+ scripts in `simulations/` — not engine CI.
 - **`storage_bench/` (Rust io_uring)** — research artifact (Linux sequential ceiling); engine decode uses **mmap/pread/threaded**; future Linux overlap via io_uring prefetch, not third-party async seek+read wrappers.
 - Re-implementing features already better in **rwkv_lightning / web-rwkv / RWKV-Infer** without a borrow audit.
-- **Compression Trinity** stays off the engine path until the afternoon experiment below passes; see **P2.b** for the codec ladder instead.
+- **Compression Trinity** remains off the default hot path after the CPU overhead gate rejected promotion; the opt-in reference codec and quality/size probes remain available under **P2.b**.
 
 ## Experiments worth one afternoon each
 
@@ -366,9 +394,10 @@ Episodic memory with **three-tier hierarchy (HBM / DRAM / NVMe)** — see https:
   resident/CPU-streaming greedy parity.
 - **Exact chunked prefill:** ordinary RWKV-7 prompt prefill uses a layer-outer
   sequence schedule controlled by `RWKV_STREAM_PREFILL_CHUNK`.
-- **Next architecture work:** qkv/DEA batching, state-aware chunk scheduling,
-  and fused kernels. Do not turn the CPU reference models into a production
-  claim until optimized kernels and real model quality are measured.
+- **Next architecture work:** state-aware chunk scheduling and fused kernels.
+  qkv/DEA batching now has a correctness-first CPU reference implementation;
+  do not turn that reference model into a production claim until optimized
+  kernels and real model quality are measured.
 
 Hardware/training gates remain CUDA/GDS, GPU-fused kernels, physical multi-SSD
 scaling, large 2.9B/7B measurements, and large-model or quantizer training.

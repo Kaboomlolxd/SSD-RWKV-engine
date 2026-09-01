@@ -7,6 +7,7 @@ from pathlib import Path
 
 import numpy as np
 import pytest
+import torch
 
 from rwkv_ssd.backends.capabilities import backend_capabilities, supports_true_streaming
 from rwkv_ssd.backends.factory import ensure_v0_backend, supports_streaming_mode
@@ -86,6 +87,294 @@ def test_rwkvcpp_provider_sync_is_weight_stationary_by_default(monkeypatch) -> N
     assert _sync_provider_every_token() is False
     monkeypatch.setenv("RWKVCPP_SYNC_EVERY_TOKEN", "1")
     assert _sync_provider_every_token() is True
+
+
+def test_rwkvcpp_sequence_prefill_reuses_native_scratch_buffers() -> None:
+    backend = RWKVCppBackend()
+    model = MagicMock()
+    model.supports_layer_streaming = True
+    model.supports_layer_streaming_sequence = True
+    model.layer_state_len = 2
+    model.n_layer = 2
+
+    def layer_step_sequence(
+        layer_id,
+        activation,
+        activation_out,
+        token_count,
+        state_in,
+        state_out,
+        v_first,
+        v_first_out,
+    ) -> None:
+        assert activation.shape[0] == token_count
+        np.copyto(activation_out, activation + float(layer_id + 1))
+        np.copyto(state_out, state_in + float(layer_id + 1))
+        if v_first_out is not None:
+            np.copyto(v_first_out, activation)
+        if v_first is not None:
+            assert v_first.shape == activation.shape
+
+    model.layer_step_sequence.side_effect = layer_step_sequence
+    backend._model = model
+    backend._n_layer = 2
+    backend._layer_global_weights = {
+        "emb.weight": torch.eye(4, 3),
+        "blocks.0.ln0.weight": torch.ones(3),
+        "blocks.0.ln0.bias": torch.zeros(3),
+        "ln_out.weight": torch.ones(3),
+        "ln_out.bias": torch.zeros(3),
+        "head.weight": np.ones((5, 3), dtype=np.float32),
+    }
+    backend._layer_reset_state(None)
+    backend._upload_provider_layer = MagicMock()
+    provider = MagicMock()
+    by_layer = {0: [object()], 1: [object()]}
+
+    backend._layer_advance_sequence([1, 2], provider, by_layer, [0, 1], None)
+    activation_buffers = [
+        call.args[2] for call in model.layer_step_sequence.call_args_list
+    ]
+    state_buffers = [
+        call.args[5] for call in model.layer_step_sequence.call_args_list
+    ]
+    v_first_buffers = [
+        call.args[7]
+        for call in model.layer_step_sequence.call_args_list
+        if call.args[7] is not None
+    ]
+
+    model.layer_step_sequence.reset_mock()
+    backend._layer_advance_sequence([1, 2], provider, by_layer, [0, 1], None)
+    assert id(model.layer_step_sequence.call_args_list[0].args[2]) == id(
+        activation_buffers[0]
+    )
+    assert id(model.layer_step_sequence.call_args_list[1].args[2]) == id(
+        activation_buffers[1]
+    )
+    assert id(model.layer_step_sequence.call_args_list[0].args[5]) == id(
+        state_buffers[0]
+    )
+    assert id(model.layer_step_sequence.call_args_list[1].args[5]) == id(
+        state_buffers[1]
+    )
+    assert id(model.layer_step_sequence.call_args_list[0].args[7]) == id(
+        v_first_buffers[0]
+    )
+
+
+def test_rwkvcpp_native_batch_reuses_each_uploaded_layer() -> None:
+    backend = RWKVCppBackend()
+    model = MagicMock()
+    model.supports_layer_streaming = True
+    model.layer_state_len = 2
+    model.n_layer = 2
+
+    calls: list[tuple[int, np.ndarray, np.ndarray]] = []
+
+    def layer_step(
+        layer_id,
+        activation_in,
+        activation_out,
+        state_in,
+        state_out,
+        v_first_in,
+        v_first_out,
+    ) -> None:
+        calls.append((int(layer_id), activation_in.copy(), state_in.copy()))
+        np.copyto(activation_out, activation_in + float(layer_id + 1))
+        np.copyto(state_out, state_in + float(layer_id + 1))
+        if v_first_out is not None:
+            np.copyto(v_first_out, activation_in)
+        if v_first_in is not None:
+            assert v_first_in.shape == activation_in.shape
+
+    model.layer_step.side_effect = layer_step
+    backend._model = model
+    backend._n_layer = 2
+    backend._layer_global_weights = {
+        "emb.weight": torch.eye(4, 3),
+        "blocks.0.ln0.weight": torch.ones(3),
+        "blocks.0.ln0.bias": torch.zeros(3),
+        "ln_out.weight": torch.ones(3),
+        "ln_out.bias": torch.zeros(3),
+        "head.weight": np.ones((5, 3), dtype=np.float32),
+    }
+    backend._layer_dense_head = backend._layer_global_weights["head.weight"]
+    backend._upload_provider_layer = MagicMock()
+    provider = MagicMock()
+    provider._prefetch_enabled = False
+    by_layer = {0: [object()], 1: [object()]}
+    states = [
+        np.zeros(4, dtype=np.float32),
+        np.ones(4, dtype=np.float32),
+    ]
+
+    logits, next_states = backend._layer_advance_batch(
+        [1, 2], states, provider, by_layer, [0, 1], None
+    )
+
+    assert logits.shape == (2, 5)
+    assert len(next_states) == 2
+    assert [layer_id for layer_id, _, _ in calls] == [0, 0, 1, 1]
+    assert backend._upload_provider_layer.call_count == 2
+    np.testing.assert_array_equal(next_states[0], [1, 1, 2, 2])
+    np.testing.assert_array_equal(next_states[1], [2, 2, 3, 3])
+
+
+def test_rwkvcpp_native_batch_prefill_reuses_each_uploaded_layer() -> None:
+    backend = RWKVCppBackend()
+    model = MagicMock()
+    model.supports_layer_streaming = True
+    model.supports_layer_streaming_sequence = True
+    model.layer_state_len = 2
+    model.n_layer = 2
+
+    calls: list[int] = []
+
+    def layer_step_sequence(
+        layer_id,
+        activation_in,
+        activation_out,
+        token_count,
+        state_in,
+        state_out,
+        v_first_in,
+        v_first_out,
+    ) -> None:
+        calls.append(int(layer_id))
+        assert activation_in.shape[0] == token_count
+        np.copyto(activation_out, activation_in + float(layer_id + 1))
+        np.copyto(state_out, state_in + float(layer_id + 1))
+        if v_first_out is not None:
+            np.copyto(v_first_out, activation_in)
+        if v_first_in is not None:
+            assert v_first_in.shape == activation_in.shape
+
+    model.layer_step_sequence.side_effect = layer_step_sequence
+    backend._model = model
+    backend._n_layer = 2
+    backend._layer_global_weights = {
+        "emb.weight": torch.eye(4, 3),
+        "blocks.0.ln0.weight": torch.ones(3),
+        "blocks.0.ln0.bias": torch.zeros(3),
+        "ln_out.weight": torch.ones(3),
+        "ln_out.bias": torch.zeros(3),
+        "head.weight": np.ones((5, 3), dtype=np.float32),
+    }
+    backend._layer_dense_head = backend._layer_global_weights["head.weight"]
+    backend._upload_provider_layer = MagicMock()
+    provider = MagicMock()
+    provider._prefetch_enabled = False
+    by_layer = {0: [object()], 1: [object()]}
+
+    logits, states = backend._layer_advance_batch_sequences(
+        [[1, 2], [2]], provider, by_layer, [0, 1], None
+    )
+
+    assert [int(logit.shape[0]) for logit in logits] == [5, 5]
+    assert calls == [0, 0, 1, 1]
+    assert backend._upload_provider_layer.call_count == 2
+    np.testing.assert_array_equal(states[0], [1, 1, 2, 2])
+    np.testing.assert_array_equal(states[1], [1, 1, 2, 2])
+
+
+def test_rwkvcpp_native_batch_prefill_falls_back_to_token_abi() -> None:
+    backend = RWKVCppBackend()
+    model = MagicMock()
+    model.supports_layer_streaming = True
+    model.supports_layer_streaming_sequence = False
+    model.layer_state_len = 2
+    model.n_layer = 2
+
+    calls: list[int] = []
+
+    def layer_step(
+        layer_id,
+        activation_in,
+        activation_out,
+        state_in,
+        state_out,
+        v_first_in,
+        v_first_out,
+    ) -> None:
+        calls.append(int(layer_id))
+        np.copyto(activation_out, activation_in + float(layer_id + 1))
+        np.copyto(state_out, state_in + float(layer_id + 1))
+        if v_first_out is not None:
+            np.copyto(v_first_out, activation_in)
+        if v_first_in is not None:
+            assert v_first_in.shape == activation_in.shape
+
+    model.layer_step.side_effect = layer_step
+    backend._model = model
+    backend._n_layer = 2
+    backend._layer_global_weights = {
+        "emb.weight": torch.eye(4, 3),
+        "blocks.0.ln0.weight": torch.ones(3),
+        "blocks.0.ln0.bias": torch.zeros(3),
+        "ln_out.weight": torch.ones(3),
+        "ln_out.bias": torch.zeros(3),
+        "head.weight": np.ones((5, 3), dtype=np.float32),
+    }
+    backend._layer_dense_head = backend._layer_global_weights["head.weight"]
+    backend._upload_provider_layer = MagicMock()
+    provider = MagicMock()
+    provider._prefetch_enabled = False
+    by_layer = {0: [object()], 1: [object()]}
+
+    _, states = backend._layer_advance_batch_sequences(
+        [[1, 2], [2]], provider, by_layer, [0, 1], None
+    )
+
+    assert calls == [0, 0, 0, 1, 1, 1]
+    assert backend._upload_provider_layer.call_count == 2
+    np.testing.assert_array_equal(states[0], [2, 2, 4, 4])
+    np.testing.assert_array_equal(states[1], [1, 1, 2, 2])
+
+
+def test_rwkvcpp_cached_step_skips_cache_stats_without_metrics() -> None:
+    backend = RWKVCppBackend()
+    model = MagicMock()
+    model.supports_layer_streaming = True
+    model.supports_layer_cached_step = True
+    model.layer_state_len = 2
+    model.n_layer = 2
+    model.layer_cache_ready.return_value = True
+
+    def layer_step_cached(
+        activation_in,
+        activation_out,
+        state_in,
+        state_out,
+        _v_first_in,
+        _v_first_out,
+    ) -> None:
+        np.copyto(activation_out, activation_in + 1.0)
+        np.copyto(state_out, state_in + 1.0)
+
+    model.layer_step_cached.side_effect = layer_step_cached
+    backend._model = model
+    backend._n_layer = 2
+    backend._layer_all_ids = [0, 1]
+    backend._layer_global_weights = {
+        "emb.weight": torch.eye(4, 3),
+        "blocks.0.ln0.weight": torch.ones(3),
+        "blocks.0.ln0.bias": torch.zeros(3),
+        "ln_out.weight": torch.ones(3),
+        "ln_out.bias": torch.zeros(3),
+        "head.weight": np.ones((5, 3), dtype=np.float32),
+    }
+    backend._layer_dense_head = backend._layer_global_weights["head.weight"]
+    backend._layer_reset_state(None)
+    backend.native_layer_cache_stats = MagicMock()
+
+    logits = backend._layer_advance_token(
+        1, MagicMock(), {}, [0, 1], None
+    )
+
+    assert logits.shape == (5,)
+    backend.native_layer_cache_stats.assert_not_called()
 
 
 def _mock_streaming_backend() -> RWKVCppBackend:

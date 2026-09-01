@@ -299,6 +299,76 @@ def invert_rotation(rotated: np.ndarray, rot: np.ndarray) -> np.ndarray:
     return rotated.astype(np.float64, copy=False) @ rot.T
 
 
+def _fwht_inplace(values: np.ndarray) -> np.ndarray:
+    """Apply an unnormalised Walsh-Hadamard transform along the last axis."""
+    # FP32 is sufficient for a 2-bit calibration rotation and avoids the
+    # doubled bandwidth of the reference FP64 helper.  The transform is
+    # orthogonal; the quantizer, not this arithmetic, dominates final error.
+    out = np.asarray(values, dtype=np.float32).copy()
+    width = out.shape[-1]
+    if width <= 0 or width & (width - 1):
+        raise ValueError("Walsh-Hadamard width must be a positive power of two")
+    step = 1
+    while step < width:
+        block = step * 2
+        # Reshape all independent butterfly blocks at once.  Iterating over
+        # every block is mathematically simple but adds 2^log2(width) Python
+        # slice operations to every matrix transform.
+        view = out.reshape(-1, width).reshape(-1, width // block, 2, step)
+        left = view[:, :, 0, :]
+        right = view[:, :, 1, :]
+        left_copy = left.copy()
+        left += right
+        right[:] = left_copy - right
+        step = block
+    return out
+
+
+def hadamard_transform(
+    values: np.ndarray, *, seed: int = 42, output_width: int | None = None
+) -> np.ndarray:
+    """Apply the same matrix-free randomized Hadamard transform used by QuIP#.
+
+    ``values`` is a matrix whose rows are independent weight vectors.  When
+    the input width is not a power of two it is zero-padded to the next power
+    of two.  The transform is involutory, so applying this function twice
+    returns the padded input (up to floating-point error).
+    """
+    matrix = np.asarray(values, dtype=np.float32)
+    if matrix.ndim != 2:
+        raise ValueError("Hadamard transform expects a 2-D matrix")
+    input_width = matrix.shape[1]
+    width = 1
+    while width < input_width:
+        width *= 2
+    if output_width is not None and int(output_width) != width:
+        raise ValueError(
+            f"Hadamard output width mismatch: expected {width}, got {output_width}"
+        )
+    padded = np.zeros((matrix.shape[0], width), dtype=np.float32)
+    padded[:, :input_width] = matrix
+    rng = np.random.default_rng(seed)
+    signs = rng.choice((-1.0, 1.0), size=width).astype(np.float32)
+    transformed = _fwht_inplace(padded)
+    transformed *= signs[None, :]
+    transformed = _fwht_inplace(transformed)
+    return transformed / np.float32(width)
+
+
+def invert_hadamard_transform(
+    rotated: np.ndarray,
+    original_width: int,
+    *,
+    seed: int = 42,
+    output_width: int | None = None,
+) -> np.ndarray:
+    """Invert :func:`hadamard_transform` and truncate padding columns."""
+    transformed = hadamard_transform(
+        rotated, seed=seed, output_width=output_width
+    )
+    return transformed[:, : int(original_width)]
+
+
 __all__ = [
     "codebook_linspace",
     "codebook_kmeans",
@@ -308,4 +378,6 @@ __all__ = [
     "hadamard_round_trip",
     "apply_rotation",
     "invert_rotation",
+    "hadamard_transform",
+    "invert_hadamard_transform",
 ]

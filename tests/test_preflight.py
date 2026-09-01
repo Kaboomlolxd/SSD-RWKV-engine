@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 
 from rwkv_ssd.tools.preflight import run_preflight
 
@@ -15,6 +16,24 @@ def test_synthetic_preflight_checks_pack_integrity(synthetic_pack) -> None:
         "pack_integrity",
         "lut2_native",
     }
+
+
+def test_preflight_reports_reproducibility_identity(synthetic_pack, tmp_path) -> None:
+    checkpoint = tmp_path / "checkpoint.pth"
+    checkpoint.write_bytes(b"checkpoint-for-preflight")
+    result = run_preflight(
+        synthetic_pack,
+        backend="synthetic",
+        checkpoint=checkpoint,
+    )
+
+    identity = result["identity"]
+    assert identity["pack_identity_sha256"]
+    assert identity["checkpoint_sha256"] == hashlib.sha256(
+        checkpoint.read_bytes()
+    ).hexdigest()
+    assert identity["native_abi"] is None
+    assert any(item["name"] == "checkpoint_identity" for item in result["checks"])
 
 
 def test_preflight_reports_manifest_escape(mutable_synthetic_pack) -> None:

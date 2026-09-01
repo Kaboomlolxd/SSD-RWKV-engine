@@ -151,6 +151,9 @@ def open_weight_store(
     hedged: bool = False,
 ) -> WeightStore:
     key = backend.strip().lower()
+    compressed = weights_path.suffix.lower() == ".zst"
+    if compressed and hedged:
+        raise ValueError("hedged reads are not supported for whole-pack zstd stores")
     if key == "threaded":
         from rwkv_ssd.runtime.io_threaded import ThreadedWeightStore
 
@@ -163,11 +166,26 @@ def open_weight_store(
         )
         store: WeightStore = ThreadedWeightStore(inner, workers=threaded_workers)
     elif key == "mmap":
-        store = MmapWeightStoreAdapter(weights_path, mmap_sequential=mmap_sequential)
+        if compressed:
+            from rwkv_ssd.runtime.io_zstd import ZstdWeightStore
+
+            store = ZstdWeightStore(weights_path)
+        else:
+            store = MmapWeightStoreAdapter(weights_path, mmap_sequential=mmap_sequential)
     elif key == "pread":
-        store = PreadWeightStoreAdapter(weights_path)
+        if compressed:
+            from rwkv_ssd.runtime.io_zstd import ZstdWeightStore
+
+            store = ZstdWeightStore(weights_path)
+        else:
+            store = PreadWeightStoreAdapter(weights_path)
     elif key in ("cold", "cold_pread", "cold-read"):
-        store = ColdPreadWeightStoreAdapter(weights_path)
+        if compressed:
+            from rwkv_ssd.runtime.io_zstd import ZstdWeightStore
+
+            store = ZstdWeightStore(weights_path)
+        else:
+            store = ColdPreadWeightStoreAdapter(weights_path)
     else:
         raise ValueError(
             f"unknown weight store backend: {backend!r} "

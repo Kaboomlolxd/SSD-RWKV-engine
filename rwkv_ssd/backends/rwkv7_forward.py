@@ -914,8 +914,11 @@ def greedy_token_ids_native(
             out.append(token)
             # Publish the exact state/logits used for this choice before
             # advancing the recurrent state with the sampled token.
-            _remember_rwkv7_state(model, state, context_last, logits)
             if control is not None:
+                # A controlled request may be cancelled from the callback or
+                # deadline before the sampled token is applied.  Preserve the
+                # pre-token snapshot so callers can resume at that boundary.
+                _remember_rwkv7_state(model, state, context_last, logits)
                 control.emit(token)
             with Timer() as t_decode:
                 logits, state = model.forward([token], state)
@@ -992,8 +995,12 @@ def decode_greedy_from_state(
                 row.compute_ms += t_decode.elapsed_ms
             last = sample_torch(logits, temperature=temperature, greedy=greedy)
             out.append(last)
-            _remember_rwkv7_state(model, state, input_token, logits)
             if control is not None:
+                # Keep the resumable pre-token boundary only when generation
+                # control can observe/cancel this iteration.  Uncontrolled
+                # decode publishes the final state once below and avoids a
+                # full recurrent-state clone per token.
+                _remember_rwkv7_state(model, state, input_token, logits)
                 control.emit(last)
             throttle_after_work(t_token, power_percent)
             if metrics is not None:
@@ -1472,8 +1479,8 @@ def greedy_token_ids_streaming(
             input_token = int(last)
             last = sample_torch(logits, temperature=temperature, greedy=greedy)
             out.append(last)
-            _remember_rwkv7_state(model, state, input_token, logits)
             if control is not None:
+                _remember_rwkv7_state(model, state, input_token, logits)
                 control.emit(last)
             # Advance once with the sampled token so the next loop iteration
             # can sample the logits it produces without consuming the same

@@ -479,6 +479,12 @@ class Manifest:
             root,
             weights_path,
             manifest_version=version,
+            logical_size=(
+                int(meta["weights_uncompressed_bytes"])
+                if str(meta.get("weights_compression", "")).lower() == "zstd"
+                and meta.get("weights_uncompressed_bytes") is not None
+                else None
+            ),
         )
         if meta.get("quality_certificate_file"):
             from rwkv_ssd.runtime.quality_certificate import verify_quality_certificate
@@ -581,6 +587,7 @@ def _validate_tensor_offsets(
     weights_path: Path,
     *,
     manifest_version: int = 1,
+    logical_size: int | None = None,
 ) -> None:
     """Validate v2 extents and warn about legacy tensor offsets.
 
@@ -699,6 +706,8 @@ def _validate_tensor_offsets(
         else:
             full = str(root / fpath) if t.shard_file else str(weights_path)
             fsize = file_sizes.get(full)
+            if not t.shard_file and logical_size is not None:
+                fsize = logical_size
         if fsize is not None and t.offset + t.length > fsize:
             logger.warning(
                 "tensor %r: offset %d + length %d exceeds %s size %d",

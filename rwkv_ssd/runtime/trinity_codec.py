@@ -44,6 +44,8 @@ from rwkv_ssd.runtime.trinity_codebook import (
     random_hadamard_matrix as _random_hadamard_matrix,
     apply_rotation as _apply_rotation,
     invert_rotation as _invert_rotation,
+    hadamard_transform as _hadamard_transform,
+    invert_hadamard_transform as _invert_hadamard_transform,
 )
 
 _LUT2_MAGIC = b"TR2\x01"
@@ -53,6 +55,7 @@ _LUT2_MAGIC_GROUPED_FP16 = b"TR2\x04"
 _LUT2_MAGIC_GROUPED_RESIDUAL = b"TR2\x05"
 _LUT2_MAGIC_INPUT_FP16 = b"TR2\x06"
 _LUT2_MAGIC_INPUT_RESIDUAL = b"TR2\x07"
+_LUT2_MAGIC_HADAMARD = b"TR2\x08"
 LUT2_MAGIC = _LUT2_MAGIC  # public alias
 ANS_MAGIC = b"TRA\x01"
 TCL_MAGIC = b"TCL\x01"  # one zlib blob per layer (concat LUT2 payloads)
@@ -86,6 +89,10 @@ def is_grouped_lut2_blob(data: bytes | memoryview) -> bool:
         _LUT2_MAGIC_INPUT_FP16,
         _LUT2_MAGIC_INPUT_RESIDUAL,
     }
+
+
+def is_hadamard_lut2_blob(data: bytes | memoryview) -> bool:
+    return len(data) >= 4 and bytes(data[:4]) == _LUT2_MAGIC_HADAMARD
 
 
 def _indices_groupwise(
@@ -272,8 +279,28 @@ def _unpack_2bit(data: bytes | memoryview, numel: int) -> np.ndarray:
     if packed.size < need:
         raise ValueError(f"trinity_lut2 indices short: {packed.size} vs {need}")
     packed = packed[:need]
-    pos = np.arange(numel, dtype=np.intp)
-    return (packed[pos // 4] >> ((pos % 4) * 2)) & 3
+    # Unpack four indices per byte in one strided vectorized pass.  The old
+    # formulation built an intp position array and performed two indexed
+    # gathers for every tensor; that overhead is noticeable for small 2-bit
+    # matrices and is pure bookkeeping.  Keep the final byte separate so
+    # tensors whose element count is not divisible by four remain unpadded in
+    # the returned array.
+    out = np.empty(numel, dtype=np.uint8)
+    full = numel // 4
+    if full:
+        values = packed[:full]
+        unpacked = out[: full * 4].reshape(full, 4)
+        unpacked[:, 0] = values & 3
+        unpacked[:, 1] = (values >> 2) & 3
+        unpacked[:, 2] = (values >> 4) & 3
+        unpacked[:, 3] = values >> 6
+    remainder = numel - full * 4
+    if remainder:
+        value = int(packed[full])
+        start = full * 4
+        for index in range(remainder):
+            out[start + index] = (value >> (index * 2)) & 3
+    return out
 
 
 def _lut2_inner_view(
@@ -312,6 +339,105 @@ def _gather_lut2(
     return torch.from_numpy(flat).reshape(entry.shape).to(dtype=dt)
 
 
+def _next_power_of_two(value: int) -> int:
+    width = 1
+    while width < value:
+        width *= 2
+    return width
+
+
+def _decode_hadamard_lut2_cpu(
+    data: bytes | memoryview, entry: TensorEntry
+) -> torch.Tensor:
+    """Decode the opt-in Hadamard+k-means format on CPU."""
+    if len(entry.shape) != 2:
+        raise ValueError(f"Hadamard LUT2 requires a 2-D tensor: {entry.name}")
+    if len(data) < 28:  # magic + width + seed + four float32 centers
+        raise ValueError(f"Hadamard LUT2 blob too short for {entry.name}")
+    width, seed = struct.unpack("<II", data[4:12])
+    input_width = int(entry.shape[1])
+    expected_width = _next_power_of_two(input_width)
+    if width != expected_width:
+        raise ValueError(
+            f"Hadamard width mismatch for {entry.name}: {width} vs {expected_width}"
+        )
+    rows = int(entry.shape[0])
+    encoded_numel = rows * width
+    codebook = np.frombuffer(
+        data, dtype=np.float32, offset=12, count=CODEBOOK_FLOATS
+    )
+    packed = memoryview(data)[12 + CODEBOOK_BYTES :]
+    indices = _unpack_2bit(packed, encoded_numel)
+    rotated = codebook[indices].reshape(rows, width)
+    restored = _invert_hadamard_transform(
+        rotated, input_width, seed=seed, output_width=width
+    )
+    shaped = torch.from_numpy(restored.astype(np.float32, copy=False)).reshape(
+        entry.shape
+    )
+    return shaped.to(dtype=dtype_from_entry(entry))
+
+
+def _decode_grouped_lut2_cpu(
+    codebooks: np.ndarray,
+    packed: bytes | memoryview,
+    entry: TensorEntry,
+    group_size: int,
+    *,
+    residual_positions: np.ndarray | None = None,
+    residual_deltas: np.ndarray | None = None,
+) -> torch.Tensor:
+    """Decode grouped LUT2 without a Python loop per codebook group.
+
+    Grouped Trinity packs are the CPU default for quality-safe 2-bit weights.
+    Their previous decoder iterated over every group and then iterated over
+    every residual entry, which made decode time scale with Python dispatch
+    rather than the actual gather.  The group dimension is regular on disk,
+    so advanced indexing can gather all complete groups at once and only the
+    final partial group needs a scalar slice.
+    """
+    numel = entry.numel
+    if group_size <= 0:
+        raise ValueError(f"invalid grouped trinity_lut2 size for {entry.name}")
+    groups = (numel + group_size - 1) // group_size
+    if codebooks.shape != (groups, CODEBOOK_FLOATS):
+        raise ValueError(
+            f"grouped trinity_lut2 codebook shape mismatch for {entry.name}: "
+            f"{codebooks.shape} vs {(groups, CODEBOOK_FLOATS)}"
+        )
+    indices = _unpack_2bit(packed, numel)
+    flat = np.empty(numel, dtype=np.float32)
+    full_groups, remainder = divmod(numel, group_size)
+    if full_groups:
+        group_indices = indices[: full_groups * group_size].reshape(
+            full_groups, group_size
+        )
+        group_ids = np.arange(full_groups, dtype=np.intp)[:, None]
+        flat[: full_groups * group_size] = codebooks[:full_groups][
+            group_ids, group_indices
+        ].reshape(-1)
+    if remainder:
+        start = full_groups * group_size
+        flat[start:] = codebooks[full_groups, indices[start:]]
+
+    if residual_positions is not None and residual_deltas is not None:
+        if residual_positions.shape != (groups, 2) or residual_deltas.shape != (
+            groups,
+            2,
+        ):
+            raise ValueError(f"grouped residual metadata shape mismatch for {entry.name}")
+        # Positions in each fixed-size residual record are distinct by
+        # construction.  Use direct indexed addition for complete groups and
+        # mask the two slots in the final partial group.
+        group_ids = np.arange(groups, dtype=np.intp)[:, None]
+        absolute = group_ids * group_size + residual_positions.astype(np.intp)
+        valid = absolute < numel
+        flat[absolute[valid]] += residual_deltas[valid]
+
+    shaped = torch.from_numpy(flat).reshape(entry.shape)
+    return shaped.to(dtype=dtype_from_entry(entry))
+
+
 def _default_codebook_algo() -> str:
     """Read codebook algo from env, default ``kmeans`` (new since v0.6.16)."""
     return os.environ.get("RWKV_TRINITY_CODEBOOK", "kmeans").strip().lower()
@@ -327,6 +453,30 @@ def encode_trinity_lut2(
 ) -> bytes:
     flat = tensor.detach().float().cpu().flatten().numpy()
     algo = (codebook or _default_codebook_algo()).strip().lower()
+    if algo == "hadamard_kmeans":
+        if layout.strip().lower() not in ("default", ""):
+            raise ValueError("hadamard_kmeans currently requires the default layout")
+        if tensor.ndim != 2:
+            raise ValueError("hadamard_kmeans requires a 2-D weight matrix")
+        rows, input_width = (int(tensor.shape[0]), int(tensor.shape[1]))
+        width = _next_power_of_two(input_width)
+        seed = 42
+        rotated = _hadamard_transform(
+            flat.reshape(rows, input_width), seed=seed, output_width=width
+        )
+        rotated_flat = rotated.reshape(-1)
+        codebook_values = _codebook_kmeans(rotated_flat, seed=seed)
+        indices = _indices_lut2(torch.from_numpy(rotated_flat), codebook_values)
+        # TR2\x08 stores the padded transform width and seed because the
+        # inverse must be reproducible from the manifest shape alone.  The
+        # payload is CPU-only by design; accelerator callers decode here and
+        # move the restored dense tensor afterward.
+        return (
+            _LUT2_MAGIC_HADAMARD
+            + struct.pack("<II", width, seed)
+            + codebook_values.astype(np.float32, copy=False).tobytes()
+            + _pack_2bit(indices)
+        )
     if algo in {
         "groupwise_kmeans",
         "groupwise_kmeans_fp16",
@@ -616,6 +766,9 @@ def decode_trinity_lut2_to_tensor(
     )
 
     dec = decode_device or device
+    if is_hadamard_lut2_blob(data):
+        t = _decode_hadamard_lut2_cpu(data, entry)
+        return t if device.type == "cpu" else t.to(device=device)
     if is_grouped_lut2_blob(data):
         if len(data) < 8:
             raise ValueError(f"grouped trinity_lut2 blob too short for {entry.name}")
@@ -683,28 +836,18 @@ def decode_trinity_lut2_to_tensor(
             return t if t.device == device else t.to(
                 device=device, non_blocking=device.type == "cpu"
             )
-        flat = np.empty(entry.numel, dtype=np.float32)
-        indices = _unpack_2bit(packed, entry.numel)
-        for group_id, cb in enumerate(codebooks):
-            start = group_id * group_size
-            end = min(start + group_size, entry.numel)
-            flat[start:end] = cb[indices[start:end]]
-        if residual_magic:
-            for group_id in range(groups):
-                base = group_id * group_size
-                valid = min(group_size, entry.numel - base)
-                assert residual_positions is not None
-                assert residual_deltas is not None
-                for position, delta in zip(
-                    residual_positions[group_id], residual_deltas[group_id], strict=True
-                ):
-                    if int(position) < valid:
-                        flat[base + int(position)] += float(delta)
+        t = _decode_grouped_lut2_cpu(
+            codebooks,
+            packed,
+            entry,
+            group_size,
+            residual_positions=residual_positions,
+            residual_deltas=residual_deltas,
+        )
         if magic in {_LUT2_MAGIC_INPUT_FP16, _LUT2_MAGIC_INPUT_RESIDUAL} and len(entry.shape) == 2:
-            shaped = torch.from_numpy(flat).reshape(entry.shape[1], entry.shape[0]).transpose(0, 1)
-        else:
-            shaped = torch.from_numpy(flat).reshape(entry.shape)
-        t = shaped.to(dtype=dtype_from_entry(entry))
+            t = t.reshape(entry.shape[1], entry.shape[0]).transpose(0, 1)
+        # The helper already applies the manifest dtype.  The input-layout
+        # transpose above is a view and avoids another cast.
         return t if device.type == "cpu" else t.to(device=device)
     codebook, idx_view, row_stride = _lut2_inner_view(data, entry)
     packed = np.frombuffer(idx_view, dtype=np.uint8)
@@ -781,9 +924,18 @@ def decode_trinity_to_bytes(data: bytes, entry: TensorEntry) -> bytes:
 
 
 def packed_length_trinity_lut2(
-    numel: int, *, codebook: str = "kmeans", group_size: int = 256
+    numel: int,
+    *,
+    codebook: str = "kmeans",
+    group_size: int = 256,
+    shape: tuple[int, ...] | list[int] | None = None,
 ) -> int:
     algo = codebook.strip().lower()
+    if algo == "hadamard_kmeans":
+        if shape is None or len(shape) != 2:
+            raise ValueError("hadamard_kmeans length calculation requires a 2-D shape")
+        width = _next_power_of_two(int(shape[1]))
+        return 12 + CODEBOOK_BYTES + (int(shape[0]) * width + 3) // 4
     if algo in {
         "groupwise_kmeans",
         "groupwise_kmeans_fp16",

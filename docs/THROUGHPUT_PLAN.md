@@ -2,12 +2,46 @@
 
 How the engine gets faster **after** correctness (M3 / V1 streaming golden). This doc is the product-facing summary; the full backlog is [`IDEAS.md`](IDEAS.md) **P2**; composition rules are in the no-stacking rule in [`IDEAS.md`](IDEAS.md) under "Explicitly deprioritized".
 
-> **Current boundary (July 25, 2026):** The detailed tables below are a
+> **Current boundary (September 1, 2026):** The detailed tables below are a
 > mechanism/history ledger. For current recommendations use
 > [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Dense FP16/BF16 remains the quality
 > reference; grouped-U8 is the compact direction; all-LUT2 throughput rows are
-> historical because the legacy application-quality gate failed. The 2.9B
-> CPU target of 15 tok/s remains open, and CUDA/GDS rows are hardware-gated.
+> historical because the legacy application-quality gate failed. The CPU
+> snapshot-publication optimization is enabled for uninterrupted generation;
+> controlled requests retain resumable snapshots. The 2.9B CPU target of 15
+> tok/s remains open, and CUDA/GDS rows are hardware-gated.
+
+## CPU optimization evidence (September 1, 2026)
+
+The focused CPU A/B probe (`bench/bench_cpu_optimizations.py`) was run against
+the real 2.9B grouped-U8 pack. It measured **5.05x** faster grouped-U8 decode
+and **4.63x** faster grouped-LUT2 decode after removing per-group Python/NumPy
+dispatch. Direct DeepEmbed sidecar row lookup was approximately **19x–1,202x**
+faster than cloning the full vocabulary table, depending on access pattern.
+
+The qkv/DEA DeepEmbed reference batch path now shares ordinary layer loads for
+variable-length prompt prefill and one-token decode. The maintained synthetic
+two-session probe was **1.17x** faster with **50% fewer layer loads**; focused
+multi-layer probes reached **1.28x–1.75x**. These are capacity/reference-path
+measurements, not a fused production-kernel claim.
+
+The native rwkv.cpp path now has a layer-outer/session-inner prefill and decode
+schedule without requiring a new native batch ABI. Each prompt layer is
+uploaded once per batch, including variable-length prompts. On the real 0.1B CPU pack,
+two warm sessions generating four tokens each reached **2.67–3.27 aggregate
+tok/s**, versus **1.34–1.60 tok/s** for independent generation, with exact
+greedy output parity. This two-session result is a capacity measurement, not a
+single-session latency claim or a physical SSD-scaling result.
+
+Uncontrolled generation now avoids intermediate recurrent-state publication:
+the local 64-token probe measured **5.758 ms** per avoided 2.9B-like copy, or
+about **368.5 ms** of copy work avoided over 64 tokens. Controlled requests
+still retain pre-token snapshots for callbacks, cancellation, and deadlines.
+
+Whole-pack zstd remains an opt-in cold-storage choice. On the 2.9B grouped pack
+it reduced physical weights from **3,689.8 MB to 3,128.8 MB**, but the
+load-plus-full-read probe was **8,898.5 ms vs 2,842.2 ms** for raw mmap, so raw
+mmap remains the hot-path default.
 
 > **June 29, 2026 (F-1 / F-2 follow-up):** Two more prefetch bugs were making
 > F1 and F2 *both* lose to the no-prefetch baseline on the F-1 / F-2 paths.
@@ -169,6 +203,9 @@ Everything below is **shipped in `rwkv_ssd/`** unless marked *gate only* or *sim
 | prefetch I/O-only (CPU decode) | `resolve_prefetch_io_only` | `RWKV_PREFETCH_IO_ONLY` |
 | Hedged reads | `io_pread` | `--io-hedged` |
 | posix_fadvise (Linux pread) | `io_pread` | `--io-backend pread` |
+| Optional whole-pack zstd cold storage | `pack_runtime`, `io_zstd` | `--compress zstd`; optional `zstandard` dependency |
+| **Vectorized grouped LUT2/U4 CPU decode** | `trinity_codec`, `pack_codec` | automatic; existing blob formats |
+| **Native rwkv.cpp shared-sweep batching** | `rwkvcpp`, `engine` | `InferenceEngine.generate_batch()`; CPU layer-outer/session-inner prefill/decode |
 
 ### RAM residency and caching (P2.c)
 
@@ -196,6 +233,7 @@ Everything below is **shipped in `rwkv_ssd/`** unless marked *gate only* or *sim
 | Mechanism | Where | CLI / env |
 |-----------|--------|-----------|
 | Trinity LUT2 layer-span decode | `trinity_codec.py` | `--pack-codec trinity_lut2` |
+| **Hadamard+k-means CPU codec** | `trinity_codec.py`, `trinity_codebook.py` | explicit `--trinity-codebook hadamard_kmeans`; research-only after local overhead gate |
 | **Selective fused decode skip** | `_decode_lut2_fused_selective` | `RWKV_LUT_GEMM_FUSED=1` |
 | **Fused LUT → GEMV** (att 4×768, FFN, head) | `lut_gemm_fused.py`, `rwkv7_linear.py` | `RWKV_LUT_GEMM_FUSED`, `RWKV_PREFER_FUSED_LUT` |
 | **Native TMix adapter pipeline** (packed w/a/g/v sweeps + activations) | `native/lut2_gather.c`, `lut_gemm_fused.py`, `rwkv7_linear.py` | `RWKV_LUT_FUSED_ADAPTERS=auto\|0\|1` |
@@ -243,8 +281,13 @@ Everything below is **shipped in `rwkv_ssd/`** unless marked *gate only* or *sim
 | Mechanism | Where | Notes |
 |-----------|--------|-------|
 | Per-layer streaming forward | `rwkv7_forward.forward_one_streaming` | inject + TMix/CMix |
+| qkv/DEA DeepEmbed batch reference | `deepembed.forward_batch_prefill_streaming`, `forward_batch_streaming` | optimized shared-layer prompt prefill/decode CPU reference path; exact parity covered; native fused kernel remains a separate qualification gate |
+| Native rwkv.cpp batch prefill/decode | `rwkvcpp._layer_advance_batch_sequences`, `_layer_advance_batch` | one active native layer plan advances every session; exact greedy parity covered |
 | Native `forward` when all blocks in `z` | `forward_one`, `greedy_token_ids_streaming` | after promote or `--warm-z` |
 | Fused TMix / CMix / head | `rwkv7_linear.tmix_one_fused`, etc. | strict / bounded paths |
+| Intermediate recurrent-state publication | `rwkv7_forward`, `rwkvcpp` | final state/logits only for uncontrolled decode; pre-token snapshots remain for callbacks/cancellation/deadlines |
+| Native sequence scratch reuse | `rwkvcpp` | reusable activation/state/v-first buffers for native sequence prefill; avoids per-layer allocations |
+| Packed native vocabulary head | `rwkvcpp`, `weight_provider` | `RWKVCPP_NATIVE_LAYER_PACKED_HEAD=1` saves dense head RAM; opt-in because packed GEMV is slower than dense BLAS on the measured 2.9B host |
 | Prefix state cache (RAM) | `state_cache.py`, `engine` | `--state-cache`, `--system-prefix` |
 | SSD session state `.state_cache/` | `state_cache.py` | v0.6.11 with `--state-cache` |
 | Ping-pong staging buffer | `staging.py` | large layer payloads |
@@ -263,16 +306,16 @@ Everything below is **shipped in `rwkv_ssd/`** unless marked *gate only* or *sim
 | **Batched TMix fused GEMV** (4×768 one kernel) | `lut2_tmix_gemv_f32`, `lut_gemm_fused.py` | **done (v0.6.14)** |
 | **Layer-span fused decode** (no per-tensor bf16 dict for att) | `weight_provider` fused span | **done (v0.6.14)** |
 | **FLUTE pack layout** (`TR2\x02` row-padded indices) | `trinity_codec.py` | **done (v0.6.14)** |
-| **Partial packed block forward** | `packed_block_forward.py` | **partial (v0.6.14)** — CPU hook; M6 full native |
+| **Packed block forward** | `packed_block_forward.py` | **done for the supported CPU fused-pack path** — grouped/LUT2 CPU blocks run without bf16 matrix injection; DeepEmbed-v1/non-fused fallbacks remain deliberate, while M6 full-native CUDA is separate |
 | **Warm disk cache default** | `RWKV_WARM_DISK_CACHE=auto` | **done (v0.6.14)** |
 | **rwkvcpp resident (phase 1)** | `backends/rwkvcpp.py`, ggml FP16 | **done** — CPU native graph |
-| **rwkvcpp pack bridge (M5)** | `GgmlWeightBridge` + same F1–F5 presets | **done** — provider/cache/prefetch parity; selective ggml slots remain a follow-up |
+| **rwkvcpp pack bridge (M5)** | `GgmlWeightBridge` + same F1–F5 presets | **done** — provider/cache/prefetch parity plus opt-in fixed native upload slots |
 | Engine io_uring | `storage_bench/` research (Linux) | **P2** — DNV-6 |
 | **M6 Albatross CUDA** | `backends/albatross.py` layer-wise provider adapter | **M6a — wired; CUDA qualification pending** |
 | **FLUTE CUDA kernel** | Trinity LUT2 on GPU | **M6b** |
 | **GDS / DeepNVMe layer swapper** | NVMe→VRAM streaming | **M6c** — DNV-10 |
 | Simulation multipliers | `simulations/` — do not stack into tok/s |
-| **Pipelined decode-cache writer** | FastPersist-style overlap | **Open** — DNV-2 |
+| **Pipelined decode-cache writer** | FastPersist-style overlap | **done** — DNV-2/3 async writer + mmap cache |
 
 ## RAM scaling model (thesis vs today)
 
@@ -333,8 +376,8 @@ Ideas that are **actionable in this repo** (not 70B projections or CSD hardware)
 | **Primary metrics** are BW, compression, decompression — `tok/s` derived | Bench reports `vs_resident`, `z_mb`, `prov_mb`, layer CSV | **done** | `bench/bench_throughput.py`, `--metrics-csv` |
 | **Micro-pipelining** overlaps read/decode/compute *within* a layer (\(\le 1\) factor) | Chunked reads + `read_ms`/`compute_ms` | **done** | `--io-chunk-policy layer_size` (auto on streaming load) |
 | **Layer-aware / gate prefetch** hides submit latency on same I/O stream | Planners + `prefetch_overlaps` | **done** | `--prefetch-policy layer_aware` (default) |
-| **Sequential layout** (Ch.10) — large aligned layer reads | `layer_grouped` pack + **single `read_bytes_span` per layer** | **partial** | `pack_runtime --pack-layout layer_grouped`; contiguous load in `weight_provider` |
-| **Compression Trinity** (~10× storage) | `trinity_lut2` / `trinity` (LUT2 + zlib); M5 `scale_u4` ladder | **started** | `--pack-codec trinity`; |
+| **Sequential layout** (Ch.10) — large aligned layer reads | `layer_grouped` pack + **single `read_bytes_span` per layer** | **done as a CPU pack/layout path**; NAND-channel gains remain hardware-dependent | `pack_runtime --pack-layout layer_grouped`; contiguous load in `weight_provider` |
+| **Compression Trinity** (~10× storage) | `trinity_lut2` / `trinity` (LUT2 + zlib); M5 `scale_u4` ladder | **done as opt-in CPU/reference path** — local overhead gate rejects it as the default hot path | `--pack-codec trinity`; |
 | **Thermal duty cycle** — fewer bytes → less SSD active time | Document burst vs sustained in benches; no fake “2× tok/s” | **doc / sim** | `thermal_duty_cycle_bench.py` (sim only) |
 | **Bounded RAM** — globals in RAM, blocks streamed/evicted | `max_layers_in_z`, provider LRU, skeleton | **done** | `--stream-layer-cache`, `--max-layers-in-z` |
 | **Decoupled provider cache** — `z` eviction ≠ decoded tensor eviction | Token 2+ reuses `_prepared_layers` / provider RAM | **done** | default on; `--no-decouple-provider-cache` |
@@ -345,6 +388,11 @@ Ideas that are **actionable in this repo** (not 70B projections or CSD hardware)
 | **Native forward when all blocks in `z`** | Avoid per-layer inject when complete (incl. tiny 2L models) | **done** | auto `max_z=n_layer` if ≤2 layers |
 | **Provider LRU by bytes** | Cap decoded RAM under budget | **done** | `max_provider_cache_bytes`; `--ram-budget-gb` |
 | **Fused LUT GEMV** (att 4×768 + FFN + head) | Skip bf16 gather in strict / bounded paths | **done** | `RWKV_LUT_GEMM_FUSED=1`; `tmix_one_fused` |
+| **Grouped CPU decode** | Broadcast complete codebook groups and unpack fixed U4 nibbles without per-element index arrays | **done** | `pack_codec`; 5.05x grouped-U8 / 4.63x grouped-LUT2 A/B |
+| **DeepEmbed sidecar row lookup** | Read only requested mmap rows and coalesce adjacent IDs | **done** | `deepembed`; ~19x–1,202x lookup A/B |
+| **DeepEmbed shared-layer batch** | One ordinary-layer load for variable-length prompt prefill and decode sessions | **done as optimized reference path** | `forward_batch_prefill_streaming`, `forward_batch_streaming` |
+| **Recurrent-state publication elision** | Publish only final state/logits for uncontrolled decode | **done** | controlled callbacks/deadlines retain snapshots |
+| **Native sequence scratch reuse** | Reuse activation/state/v-first buffers during sequence prefill | **done** | `rwkvcpp` native sequence ABI |
 | **SSD tier / partial fused presets** | ~201–260 MB `z` compromises | **done** | `RWKV_SSD_TIER=1`, `RWKV_PARTIAL_FUSED=1` |
 | **Provider cache dedup** | Drop raw `_cache` after prepare | **done** | `prepare_layer_for_z` |
 | **Warm disk cache at load** | `.decode_cache/` pre-built when promote off | **done** | `RWKV_WARM_DISK_CACHE=auto` |
@@ -421,24 +469,33 @@ Aligned with [`IDEAS.md`](IDEAS.md) subsections.
 2. Within-layer micro-pipelining — **done** — auto `io_chunk_policy=layer_size` on streaming load.
 3. Gate-based prefetch — **done** — `gate` + `layer_aware` planners.
 4. **Single-read contiguous layer load** — **done (v0.6.5)** — when pack offsets are contiguous.
-5. SSM speculation cache — not on engine path.
+5. SSM speculation cache — deferred; the generic snapshot serializer is not a
+   proposal/trajectory cache contract.
 
 ### P2.b — Bandwidth multipliers (mutually exclusive)
 
-1. M5 quant ladder — **partial** — `scale_u8` + `scale_u4` codecs.
-2. Compression path comparison + optional Trinity — **one codec wins**.
-3. NAND channel-aligned `weights.bin` — **partial** — `layer_grouped` + sector padding in `pack_runtime`.
+1. M5 quant ladder — **done on CPU** — `scale_u8`, `scale_u4`, grouped-U8,
+   and reference Trinity codecs are measurable with quality gates.
+2. Compression path comparison + optional Trinity — **done as an opt-in
+   evaluation path**; default selection remains quality- and certificate-bound.
+3. NAND channel-aligned `weights.bin` — **done as a CPU pack-layout path** — `layer_grouped` + sector padding in `pack_runtime`; actual NAND-channel gains remain hardware qualification.
 
 ### P2.c — Schedule / topology
 
-1. Hot-layer pinning + residency profiles — **partial** — `deploy/rwkv7_0.1b_partial*.json`.
+1. Hot-layer pinning + residency profiles — **done as a CPU policy** —
+   `deploy/rwkv7_0.1b_partial*.json`; physical-drive gains remain deployment
+   qualification.
 2. Engine I/O backends — **done** — `mmap` | `pread` | `threaded`.
-3. Second NVMe / NUMA / micro-batching — bench first (not on engine path).
+3. CPU micro-batching — **done as a reference/capacity path** for synthetic,
+   ChatRWKV, DeepEmbed reference, and native rwkv.cpp backends; second NVMe and
+   NUMA remain hardware-gated and require target hardware measurements.
 4. Auto streaming defaults (`throughput_defaults.py`) — **done** — layer_size chunks + mmap sequential.
 
 ### P2.d — Reliability / tail
 
-Erasure coding, hedged reads, SMART — production; does not multiply steady-state tok/s.
+Hedged reads and SSD health monitoring are shipped CPU primitives. Erasure
+coding and SMART-aware scheduling remain deployment/reliability work; none
+multiplies steady-state tok/s.
 
 ### P2.e — Speculative amplifiers (conditional)
 
@@ -455,6 +512,10 @@ MTP, n-gram weight cache — **done (gate/cache)** — `--ngram-weight-cache`; `
 5. **Codec policy** — runtime `RWKV_CODEC_POLICY=accuracy|hybrid` for decode-path selection without repacking. **Shipped:** `_codec_policy_entry_overrides` routes sensitive layers to shadow sidecar; `accuracy` policy covers head/lm_head/output.
 6. **RAM budget auto-profile** — set `RWKV_RAM_BUDGET_GB=N` and the engine picks the right F1/F3/F5 preset automatically. **Shipped:** `select_ram_budget_tier` + `apply_ram_budget_tier`; `0.5 GB → F5`, `0.21 GB → F2`, `0.15 GB → F1`.
 7. Measure with **`bench/bench_io_ceiling.py --heavy --full`** (`staging_ms` → 0 steady after warm).
+8. Keep longer grouped-U8 quality, held-out/free-running validation, and the
+   15 tok/s 2.9B target as qualification work. The CPU DeepEmbed decode fast
+   path also removes single-token masks/temporary loops; retain it only for
+   one-row decode, with prompt behavior on the exact general path.
 
 ### GPU (M6 — primary tok/s)
 
@@ -507,5 +568,6 @@ MTP, n-gram weight cache — **done (gate/cache)** — `--ngram-weight-cache`; `
 > **rwkvcpp bridge (M5):** `rwkv_ssd/runtime/ggml_weight_bridge.py` now wires
 > the shared ManifestWeightProvider, F1-F5 presets, Trinity/shadow decode,
 > provider/disk caches, and non-blocking prefetch into the native ggml graph.
-> The first bridge keeps the converted `.bin` graph resident; selective ggml
-> weight slots are a separate RAM-reduction follow-up.
+> The bridge keeps the converted `.bin` graph resident by default and exposes
+> opt-in fixed native upload slots for bounded-RAM deployments when the loaded
+> ABI supports them.

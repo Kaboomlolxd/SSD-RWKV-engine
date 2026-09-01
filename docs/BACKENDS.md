@@ -238,6 +238,14 @@ run with sustained generation, multiple samples, and the required fixture
 coverage. RSS high-water, fixed process overhead, provider-owned bytes, and
 file-backed mmap payloads are reported separately from the native layer cache.
 
+A September 1, 2026 follow-up quality probe covered **6 prompts and 32
+teacher-forced autoregressive positions per prompt** on the same g32 grouped-U8
+pack. It passed the configured gates with minimum top-10 overlap **0.90**,
+maximum KL **0.010936**, and maximum state relative L2 **0.034156**. This is
+supplemental evidence only: the manifest-bound certificate still declares its
+original three-prompt/eight-position scope, and held-out, sustained, and
+free-running quality claims remain open.
+
 ## ChatRWKV and F tiers
 
 ChatRWKV is the most useful CPU reference for pack correctness and residency
@@ -247,8 +255,11 @@ promote-to-full-`z`, prefix state cache, and the F-tier presets. See
 [`V1_STREAMING.md`](V1_STREAMING.md) for the code map.
 
 The RWKV7a DeepEmbed-v1 checkpoint is supported by the native ChatRWKV path.
-The older qkv/DEA DeepEmbed contract has a correctness-first CPU reference
-adapter with a `DeepEmbed.bin` sidecar; it is not a fused rwkv.cpp backend.
+The older qkv/DEA DeepEmbed contract has an optimized CPU reference adapter with
+a `DeepEmbed.bin` sidecar, including shared-layer prompt-prefill and decode
+batching; it is not a fused rwkv.cpp backend. Native rwkv.cpp exposes the same
+CPU layer-outer/session-inner prefill/decode schedule through
+`InferenceEngine.generate_batch()` when its layer-local ABI is available.
 
 ## Other backends
 

@@ -56,6 +56,28 @@ def _sync_provider_every_token() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _native_layer_packed_head_enabled() -> bool:
+    """Return whether native layer streaming should trade head speed for RAM.
+
+    The packed vocabulary head avoids materializing a potentially very large
+    FP32 host matrix, but the measured CPU GEMV is slower than the dense BLAS
+    projection on the current host.  Keep the default on the speed path and
+    expose the memory-saving choice explicitly for bounded-RAM deployments.
+    ``auto`` is intentionally equivalent to disabled until a host-specific
+    profile proves otherwise.
+    """
+    raw = os.environ.get("RWKVCPP_NATIVE_LAYER_PACKED_HEAD", "auto").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"", "0", "false", "no", "off", "auto"}:
+        return False
+    logger.warning(
+        "Ignoring invalid RWKVCPP_NATIVE_LAYER_PACKED_HEAD=%r; using dense head",
+        raw,
+    )
+    return False
+
+
 def _resolve_layer_cache_bytes(default: int = 0) -> int:
     """Resolve the bounded native decoded-layer cache cap."""
     raw = os.environ.get("RWKVCPP_LAYER_CACHE_BYTES")
@@ -304,6 +326,7 @@ class RWKVCppBackend(RecurrentBackend):
             "misses": 0,
             "evictions": 0,
         }
+        self._layer_all_ids: list[int] = []
         self._layer_states: list[np.ndarray] | None = None
         # Reusable contiguous buffers for the native cached layer-step ABI.
         # Avoid concatenating and re-slicing the complete recurrent state on
@@ -314,7 +337,17 @@ class RWKVCppBackend(RecurrentBackend):
         self._layer_v_first: np.ndarray | None = None
         self._layer_activation_scratch: tuple[np.ndarray, np.ndarray] | None = None
         self._layer_v_first_scratch: tuple[np.ndarray, np.ndarray] | None = None
+        # Reusable buffers for the native sequence-prefill ABI.  A prefill
+        # sweep alternates activation buffers between layers and reuses one
+        # state/v_first output buffer after each layer has copied its result
+        # into the persistent recurrent state.  This avoids allocating large
+        # arrays once per layer on every prompt.
+        self._layer_sequence_activation_scratch: tuple[np.ndarray, np.ndarray] | None = None
+        self._layer_sequence_state_scratch: np.ndarray | None = None
+        self._layer_sequence_v_first_scratch: np.ndarray | None = None
         self._layer_global_weights: dict[str, Any] = {}
+        self._layer_packed_head: tuple[Any, int, int] | None = None
+        self._layer_dense_head: np.ndarray | None = None
 
     @staticmethod
     def is_available() -> bool:
@@ -436,6 +469,7 @@ class RWKVCppBackend(RecurrentBackend):
                 "ABI for the selected F1-F4 tier"
             )
         self._n_layer = int(self._model.n_layer)
+        self._layer_all_ids = list(range(self._n_layer))
         self._decode_fn, self._encode_fn = rwkv_world_tokenizer.get_world_tokenizer_v20230424()
         self._state = None
         self._last_logits = None
@@ -447,7 +481,12 @@ class RWKVCppBackend(RecurrentBackend):
         self._layer_v_first = None
         self._layer_activation_scratch = None
         self._layer_v_first_scratch = None
+        self._layer_sequence_activation_scratch = None
+        self._layer_sequence_state_scratch = None
+        self._layer_sequence_v_first_scratch = None
         self._layer_global_weights = {}
+        self._layer_packed_head = None
+        self._layer_dense_head = None
         self._native_layer_cache_bytes = 0
         if self._native_layer_streaming_active():
             set_cache = getattr(self._model, "set_layer_cache_bytes", None)
@@ -581,8 +620,8 @@ class RWKVCppBackend(RecurrentBackend):
                 token, state, next_state, logits, use_numpy=True
             )
             state, next_state = next_state, state
-            self._last_logits = np.asarray(logits, dtype=np.float32).copy()
         self._state = state
+        self._last_logits = np.asarray(logits, dtype=np.float32).copy()
         self._last_token_id = out_ids[-1] if out_ids else ids[-1]
         return self.decode_text(out_ids)
 
@@ -631,18 +670,24 @@ class RWKVCppBackend(RecurrentBackend):
             # streaming callback observes it.  The state is the context after
             # the prompt/previous token and the logits are the exact greedy
             # probe used for this choice; the next eval advances both.
-            self._state = np.asarray(state, dtype=np.float32).copy()
-            self._last_logits = np.asarray(logits, dtype=np.float32).copy()
             if control is not None:
+                # Cancellation/deadline-aware callers may resume at the
+                # pre-token boundary.  Uncontrolled decode has no observer
+                # for this snapshot, so avoid copying the full recurrent
+                # state on every token.
+                self._state = np.asarray(state, dtype=np.float32).copy()
+                self._last_logits = np.asarray(logits, dtype=np.float32).copy()
                 control.emit(token)
             logits, next_state = self._model.eval(
                 token, state, next_state, logits, use_numpy=True
             )
             state, next_state = next_state, state
-            self._last_logits = np.asarray(logits, dtype=np.float32).copy()
+            if control is not None:
+                self._last_logits = np.asarray(logits, dtype=np.float32).copy()
             _record_token_metrics(metrics, token_started, prefill_s=prefill_s)
         decode_s = time.perf_counter() - decode_t0
-        self._state = state
+        self._state = np.asarray(state, dtype=np.float32).copy()
+        self._last_logits = np.asarray(logits, dtype=np.float32).copy()
         self._last_token_id = out_ids[-1] if out_ids else ids[-1]
         if metrics is not None:
             metrics.prefill_wall_s = prefill_s
@@ -669,17 +714,42 @@ class RWKVCppBackend(RecurrentBackend):
         """Materialize only the global tensors around the native block ABI."""
         if self._layer_global_weights:
             return
+        required_names = self._LAYER_GLOBAL_NAMES
+        packed_head = None
+        if _native_layer_packed_head_enabled():
+            prime = getattr(provider, "_prime_fused_global_blobs", None)
+            if callable(prime):
+                prime()
+            get_blob = getattr(provider, "get_fused_lut_blob", None)
+            candidate = get_blob("head.weight") if callable(get_blob) else None
+            if candidate is not None:
+                try:
+                    blob, out_features, in_features = candidate
+                    if len(blob) >= 8 and int(out_features) > 0 and int(in_features) > 0:
+                        packed_head = (blob, int(out_features), int(in_features))
+                except (TypeError, ValueError):
+                    packed_head = None
+            if packed_head is not None:
+                required_names = frozenset(
+                    name for name in self._LAYER_GLOBAL_NAMES if name != "head.weight"
+                )
+                logger.info(
+                    "rwkv.cpp native layer streaming: retaining packed vocabulary head "
+                    "(%dx%d); dense head materialization disabled",
+                    packed_head[1],
+                    packed_head[2],
+                )
         groups: dict[int, list[Any]] = {}
         seen: set[str] = set()
         for entries in by_layer.values():
             for entry in entries:
-                if entry.name in self._LAYER_GLOBAL_NAMES and entry.name not in seen:
+                if entry.name in required_names and entry.name not in seen:
                     groups.setdefault(int(entry.layer_id), []).append(entry)
                     seen.add(entry.name)
         loaded: dict[str, Any] = {}
         for entries in groups.values():
             loaded.update(provider.load_layer_tensors_materialized(entries))
-        missing = sorted(self._LAYER_GLOBAL_NAMES.difference(loaded))
+        missing = sorted(required_names.difference(loaded))
         if missing:
             raise RuntimeError(
                 "rwkv.cpp native layer streaming requires provider-visible global "
@@ -687,18 +757,25 @@ class RWKVCppBackend(RecurrentBackend):
             )
         import torch
 
-        for name in self._LAYER_GLOBAL_NAMES:
+        for name in required_names:
             tensor = loaded[name]
             if not isinstance(tensor, torch.Tensor):
                 raise TypeError(f"provider returned non-tensor global {name}")
             self._layer_global_weights[name] = tensor.detach().to(
                 device="cpu", dtype=torch.float32
             ).contiguous()
+        if packed_head is None:
+            head = self._layer_global_weights.get("head.weight")
+            if isinstance(head, torch.Tensor):
+                self._layer_dense_head = head.numpy()
+            elif isinstance(head, np.ndarray):
+                self._layer_dense_head = np.asarray(head)
+        self._layer_packed_head = packed_head
         release_globals = getattr(provider, "release_native_global_cache", None)
         if callable(release_globals):
             # The native layer backend now owns the global host views.  Do not
             # leave the provider's preload aliases in its bounded cache.
-            release_globals(self._LAYER_GLOBAL_NAMES)
+            release_globals(required_names)
 
     def _layer_reset_state(self, state: np.ndarray | None) -> None:
         if self._model is None or not self._native_layer_streaming_active():
@@ -761,14 +838,40 @@ class RWKVCppBackend(RecurrentBackend):
         # boundary and leave the hot projection in the same host array domain
         # as the native ABI.
         hidden = np.asarray(value, dtype=np.float32)
-        head = self._layer_global_weights["head.weight"]
-        if not isinstance(head, np.ndarray):
-            head = head.detach().cpu().numpy()
+        if self._layer_packed_head is not None:
+            import torch
+
+            from rwkv_ssd.runtime.lut_gemm_fused import lut2_gemv
+
+            blob, out_features, in_features = self._layer_packed_head
+            if int(hidden.size) != int(in_features):
+                raise RuntimeError(
+                    f"packed head input width {in_features} is incompatible with "
+                    f"activation width {int(hidden.size)}"
+                )
+            logits = lut2_gemv(
+                blob,
+                torch.from_numpy(np.ascontiguousarray(hidden)),
+                out_features=out_features,
+                in_features=in_features,
+                # Greedy selection is particularly sensitive to head error;
+                # use the normal FP32 activation path unless the operator has
+                # separately opted into head INT8 activation quantization.
+                activation_int8=False,
+            )
+            return logits.detach().cpu().numpy().astype(np.float32, copy=False)
+        head = self._layer_dense_head
+        if head is None:
+            head = self._layer_global_weights["head.weight"]
+            if not isinstance(head, np.ndarray):
+                head = head.detach().cpu().numpy()
+            self._layer_dense_head = head
         if head.ndim != 2:
             raise RuntimeError("head.weight must be a rank-2 tensor")
-        if int(head.shape[1]) == int(hidden.size):
+        hidden_width = int(hidden.shape[-1]) if hidden.ndim == 2 else int(hidden.size)
+        if int(head.shape[1]) == hidden_width:
             logits = np.matmul(hidden, head.T)
-        elif int(head.shape[0]) == int(hidden.size):
+        elif int(head.shape[0]) == hidden_width:
             logits = np.matmul(hidden, head)
         else:
             raise RuntimeError(
@@ -831,7 +934,7 @@ class RWKVCppBackend(RecurrentBackend):
         )
         cached_step = bool(
             len(layer_ids) == self._n_layer
-            and layer_ids == list(range(self._n_layer))
+            and layer_ids == self._layer_all_ids
             and getattr(self._model, "supports_layer_cached_step", False)
             and callable(getattr(self._model, "layer_cache_ready", None))
             and self._model.layer_cache_ready()
@@ -851,7 +954,7 @@ class RWKVCppBackend(RecurrentBackend):
                 activation_scratch = (np.empty_like(activation), np.empty_like(activation))
                 self._layer_activation_scratch = activation_scratch
             activation_out = activation_scratch[0]
-            cache_before = self.native_layer_cache_stats()
+            cache_before = self.native_layer_cache_stats() if metrics is not None else None
             self._model.layer_step_cached(
                 activation,
                 activation_out,
@@ -860,7 +963,9 @@ class RWKVCppBackend(RecurrentBackend):
                 None,
                 None,
             )
-            cache_after = self.native_layer_cache_stats()
+            cache_after = (
+                self.native_layer_cache_stats() if metrics is not None else None
+            )
             state_len = int(self._model.layer_state_len)
             self._layer_state_flat = state_out
             self._layer_state_scratch = state_in
@@ -870,9 +975,8 @@ class RWKVCppBackend(RecurrentBackend):
             ]
             if metrics is not None:
                 metrics.native_layer_streaming = True
-                self._record_native_layer_cache_delta(
-                    metrics, cache_before, cache_after
-                )
+                assert cache_before is not None and cache_after is not None
+                self._record_native_layer_cache_delta(metrics, cache_before, cache_after)
             hidden = self._layer_norm_global(
                 activation_out,
                 "ln_out.weight",
@@ -944,6 +1048,345 @@ class RWKVCppBackend(RecurrentBackend):
         )
         return self._layer_logits_global(hidden)
 
+    def _layer_advance_batch_sequences(
+        self,
+        token_sequences: list[list[int]],
+        provider: Any,
+        by_layer: dict[int, list[Any]],
+        layer_ids: list[int],
+        metrics: MetricsCollector | None,
+    ) -> tuple[list[np.ndarray], list[np.ndarray]]:
+        """Prefill independent prompts with one native upload per layer.
+
+        Prompt lengths may differ, so the native sequence ABI cannot receive
+        all sessions in one call.  Keeping the layer active while visiting
+        each session still removes the repeated provider read and native
+        upload from the old session-outer loop.  Older DLLs use the same
+        schedule with their token ABI.
+        """
+        if self._model is None or not self._native_layer_streaming_active():
+            raise RuntimeError("native layer streaming is not active")
+        if not token_sequences or not layer_ids:
+            raise ValueError("native batch prefill requires prompts and layers")
+        import torch
+
+        emb = self._layer_global_weights["emb.weight"]
+        activations: list[np.ndarray] = []
+        for token_ids in token_sequences:
+            if not token_ids:
+                raise ValueError("native batch prefill prompts must be non-empty")
+            ids = np.asarray(token_ids, dtype=np.int64)
+            if int(ids.min()) < 0 or int(ids.max()) >= int(emb.shape[0]):
+                raise ValueError("token id is outside the provider vocabulary")
+            activation = emb.index_select(0, torch.from_numpy(ids)).detach().cpu().numpy()
+            activation = np.asarray(activation, dtype=np.float32).copy()
+            activations.append(
+                self._layer_norm_sequence_global(
+                    activation,
+                    "blocks.0.ln0.weight",
+                    "blocks.0.ln0.bias",
+                )
+            )
+
+        batch_size = len(activations)
+        state_len = int(self._model.layer_state_len)
+        state_size = int(self._n_layer) * state_len
+        states = [np.zeros(state_size, dtype=np.float32) for _ in activations]
+        v_first: list[np.ndarray | None] = [None] * batch_size
+        use_sequence = bool(
+            getattr(self._model, "supports_layer_streaming_sequence", False)
+            and callable(getattr(self._model, "layer_step_sequence", None))
+        )
+
+        if metrics is not None:
+            metrics.batch_size = max(int(getattr(metrics, "batch_size", 0)), batch_size)
+            metrics.weight_sweeps += 1
+
+        for index, layer_id in enumerate(layer_ids):
+            entries = by_layer.get(layer_id, [])
+            if not entries:
+                raise RuntimeError(f"provider has no entries for RWKV layer {layer_id}")
+            if index + 1 < len(layer_ids) and getattr(
+                provider, "_prefetch_enabled", True
+            ):
+                provider.prefetch_entries(by_layer.get(layer_ids[index + 1], []))
+            layer_start = len(metrics.layers) if metrics is not None else 0
+            self._upload_provider_layer(provider, layer_id, entries, metrics)
+            row = None
+            if metrics is not None:
+                row = (
+                    metrics.layers[-1]
+                    if len(metrics.layers) > layer_start
+                    else metrics.start_layer(layer_id)
+                )
+            started = time.perf_counter()
+            state_offset = index * state_len
+            for batch_index, activation in enumerate(activations):
+                state_in = states[batch_index][state_offset : state_offset + state_len]
+                state_out = np.empty_like(state_in)
+                activation_out = np.empty_like(activation)
+                if use_sequence:
+                    if index == 0:
+                        v_first_out = np.empty_like(activation)
+                        self._model.layer_step_sequence(
+                            int(layer_id),
+                            activation,
+                            activation_out,
+                            int(activation.shape[0]),
+                            state_in,
+                            state_out,
+                            None,
+                            v_first_out,
+                        )
+                        v_first[batch_index] = v_first_out
+                    else:
+                        v_first_in = v_first[batch_index]
+                        if v_first_in is None:
+                            raise RuntimeError("native batch prefill lost v_first state")
+                        self._model.layer_step_sequence(
+                            int(layer_id),
+                            activation,
+                            activation_out,
+                            int(activation.shape[0]),
+                            state_in,
+                            state_out,
+                            v_first_in,
+                            None,
+                        )
+                else:
+                    state_a = np.empty_like(state_in)
+                    state_b = np.empty_like(state_in)
+                    current_state = state_in
+                    next_state = state_a
+                    if index == 0:
+                        v_first_out = np.empty_like(activation)
+                        v_first[batch_index] = v_first_out
+                    else:
+                        v_first_in = v_first[batch_index]
+                        if v_first_in is None:
+                            raise RuntimeError("native batch prefill lost v_first state")
+                    for token_index in range(int(activation.shape[0])):
+                        token_v_out = (
+                            np.empty(activation.shape[1], dtype=np.float32)
+                            if index == 0
+                            else None
+                        )
+                        self._model.layer_step(
+                            int(layer_id),
+                            activation[token_index],
+                            activation_out[token_index],
+                            current_state,
+                            next_state,
+                            None
+                            if index == 0
+                            else v_first_in[token_index],
+                            token_v_out,
+                        )
+                        if index == 0:
+                            v_first[batch_index][token_index] = token_v_out
+                        current_state, next_state = next_state, current_state
+                    np.copyto(state_out, current_state)
+                np.copyto(state_in, state_out)
+                activations[batch_index] = activation_out
+            if row is not None:
+                row.compute_ms += (time.perf_counter() - started) * 1000.0
+            if metrics is not None:
+                metrics.native_layer_streaming = True
+                metrics.weight_layer_loads += 1
+
+        logits: list[np.ndarray] = []
+        for activation in activations:
+            hidden = self._layer_norm_sequence_global(
+                activation[-1:],
+                "ln_out.weight",
+                "ln_out.bias",
+            )
+            logits.append(self._layer_logits_global(hidden[0]))
+        return logits, states
+
+    def _layer_advance_batch(
+        self,
+        token_ids: list[int],
+        states: list[np.ndarray],
+        provider: Any,
+        by_layer: dict[int, list[Any]],
+        layer_ids: list[int],
+        metrics: MetricsCollector | None,
+    ) -> tuple[np.ndarray, list[np.ndarray]]:
+        """Advance independent native states with one upload per layer.
+
+        The rwkv.cpp layer ABI is token-shaped, but a layer plan remains
+        active between calls.  Calling that ABI for every session while the
+        same layer is active removes repeated provider reads and uploads from
+        multi-request greedy decode without requiring a new native batch ABI.
+        """
+        if self._model is None or not self._native_layer_streaming_active():
+            raise RuntimeError("native layer streaming is not active")
+        if not token_ids or len(token_ids) != len(states):
+            raise ValueError("token_ids and states must be equally sized and non-empty")
+        if not layer_ids:
+            raise ValueError("native batch decode requires at least one layer")
+        import torch
+
+        emb = self._layer_global_weights["emb.weight"]
+        ids = np.asarray(token_ids, dtype=np.int64)
+        if int(ids.min()) < 0 or int(ids.max()) >= int(emb.shape[0]):
+            raise ValueError("token id is outside the provider vocabulary")
+        activation = emb.index_select(0, torch.from_numpy(ids)).detach().cpu().numpy()
+        activation = np.asarray(activation, dtype=np.float32).copy()
+        activation = self._layer_norm_sequence_global(
+            activation,
+            "blocks.0.ln0.weight",
+            "blocks.0.ln0.bias",
+        )
+        batch_size = len(token_ids)
+        state_len = int(self._model.layer_state_len)
+        expected_state = int(self._n_layer) * state_len
+        state_in: list[np.ndarray] = []
+        state_out: list[np.ndarray] = []
+        for state in states:
+            current = np.asarray(state, dtype=np.float32)
+            if int(current.size) != expected_state:
+                raise ValueError(
+                    f"native batch state has {int(current.size)} elements; "
+                    f"expected {expected_state}"
+                )
+            current = np.ascontiguousarray(current.reshape(expected_state)).copy()
+            state_in.append(current)
+            state_out.append(np.empty_like(current))
+        next_activation = np.empty_like(activation)
+        v_first = np.empty_like(activation)
+
+        if metrics is not None:
+            metrics.batch_size = batch_size
+            metrics.weight_sweeps += 1
+
+        for index, layer_id in enumerate(layer_ids):
+            entries = by_layer.get(layer_id, [])
+            if not entries:
+                raise RuntimeError(f"provider has no entries for RWKV layer {layer_id}")
+            if index + 1 < len(layer_ids) and getattr(
+                provider, "_prefetch_enabled", True
+            ):
+                provider.prefetch_entries(by_layer.get(layer_ids[index + 1], []))
+            layer_start = len(metrics.layers) if metrics is not None else 0
+            self._upload_provider_layer(provider, layer_id, entries, metrics)
+            row = None
+            if metrics is not None:
+                row = (
+                    metrics.layers[-1]
+                    if len(metrics.layers) > layer_start
+                    else metrics.start_layer(layer_id)
+                )
+            started = time.perf_counter()
+            state_offset = index * state_len
+            for batch_index in range(batch_size):
+                v_first_in = None if index == 0 else v_first[batch_index]
+                v_first_out = v_first[batch_index] if index == 0 else None
+                self._model.layer_step(
+                    int(layer_id),
+                    activation[batch_index],
+                    next_activation[batch_index],
+                    state_in[batch_index][state_offset : state_offset + state_len],
+                    state_out[batch_index][state_offset : state_offset + state_len],
+                    v_first_in,
+                    v_first_out,
+                )
+                np.copyto(
+                    state_in[batch_index][state_offset : state_offset + state_len],
+                    state_out[batch_index][state_offset : state_offset + state_len],
+                )
+            activation, next_activation = next_activation, activation
+            if row is not None:
+                row.compute_ms += (time.perf_counter() - started) * 1000.0
+            if metrics is not None:
+                metrics.native_layer_streaming = True
+
+        hidden = self._layer_norm_sequence_global(
+            activation,
+            "ln_out.weight",
+            "ln_out.bias",
+        )
+        if self._layer_packed_head is not None:
+            # The packed head GEMV ABI is intentionally scalar.  Keep the
+            # memory-saving mode correct for batches, while dense BLAS uses a
+            # single matrix multiplication below.
+            logits = np.stack(
+                [self._layer_logits_global(row) for row in hidden], axis=0
+            )
+        else:
+            logits = self._layer_logits_global(hidden)
+        return np.asarray(logits, dtype=np.float32), state_in
+
+    def generate_greedy_batch_streaming(
+        self,
+        prompts: list[str],
+        max_tokens: int,
+        provider: Any,
+        by_layer: dict[int, list[Any]],
+        layer_ids: list[int],
+        metrics: MetricsCollector | None = None,
+    ) -> list[list[int]]:
+        """Greedy batch generation using a native layer-outer decode sweep."""
+        if self._model is None or self._encode_fn is None:
+            raise RuntimeError("backend not loaded")
+        if not self._native_layer_streaming_active():
+            raise RuntimeError(
+                "rwkv.cpp batch streaming requires the native layer-local ABI"
+            )
+        if not prompts:
+            return []
+        self._load_layer_global_weights(provider, by_layer)
+        prompt_sequences = [self._encode_fn(prompt) or [0] for prompt in prompts]
+        logits_list: list[np.ndarray] = []
+        states: list[np.ndarray] = []
+        prefill_started = time.perf_counter()
+        logits_list, states = self._layer_advance_batch_sequences(
+            [[int(token_id) for token_id in token_ids] for token_ids in prompt_sequences],
+            provider,
+            by_layer,
+            layer_ids,
+            metrics,
+        )
+        logits_list = [np.asarray(logits, dtype=np.float32).copy() for logits in logits_list]
+        prefill_s = time.perf_counter() - prefill_started
+        if metrics is not None:
+            metrics.batch_size = len(prompts)
+            metrics.batch_prefill_wall_s = prefill_s
+            metrics.prefill_wall_s = prefill_s
+
+        outputs = [[] for _ in prompts]
+        count = max(0, int(max_tokens))
+        decode_started = time.perf_counter()
+        batch_logits = np.stack(logits_list, axis=0)
+        for step in range(count):
+            generated = [int(np.argmax(row)) for row in batch_logits]
+            for output, token in zip(outputs, generated, strict=True):
+                output.append(token)
+            if step + 1 >= count:
+                break
+            batch_logits, states = self._layer_advance_batch(
+                generated,
+                states,
+                provider,
+                by_layer,
+                layer_ids,
+                metrics,
+            )
+        decode_s = time.perf_counter() - decode_started
+        if states:
+            self._state = states[0].copy()
+            self._last_logits = batch_logits[0].copy()
+            self._last_token_id = int(
+                outputs[0][-1] if outputs[0] else prompt_sequences[0][-1]
+            )
+        if metrics is not None:
+            metrics.batch_decode_wall_s = decode_s
+            metrics.decode_wall_s = decode_s
+            metrics.tokens_generated = len(prompts) * count
+            metrics.native_layer_streaming = True
+        return outputs
+
     def _layer_advance_sequence(
         self,
         token_ids: list[int],
@@ -987,6 +1430,34 @@ class RWKVCppBackend(RecurrentBackend):
             and getattr(self._model, "supports_layer_streaming_sequence", False)
             and callable(getattr(self._model, "layer_step_sequence", None))
         )
+        sequence_activation_scratch = self._layer_sequence_activation_scratch
+        sequence_state_scratch = self._layer_sequence_state_scratch
+        sequence_v_first_scratch = self._layer_sequence_v_first_scratch
+        if use_sequence:
+            if (
+                sequence_activation_scratch is None
+                or any(item.shape != activation.shape for item in sequence_activation_scratch)
+                or any(item.dtype != activation.dtype for item in sequence_activation_scratch)
+            ):
+                sequence_activation_scratch = (
+                    np.empty_like(activation),
+                    np.empty_like(activation),
+                )
+                self._layer_sequence_activation_scratch = sequence_activation_scratch
+            if (
+                sequence_state_scratch is None
+                or sequence_state_scratch.shape != self._layer_states[0].shape
+                or sequence_state_scratch.dtype != self._layer_states[0].dtype
+            ):
+                sequence_state_scratch = np.empty_like(self._layer_states[0])
+                self._layer_sequence_state_scratch = sequence_state_scratch
+            if (
+                sequence_v_first_scratch is None
+                or sequence_v_first_scratch.shape != activation.shape
+                or sequence_v_first_scratch.dtype != activation.dtype
+            ):
+                sequence_v_first_scratch = np.empty_like(activation)
+                self._layer_sequence_v_first_scratch = sequence_v_first_scratch
         for index, layer_id in enumerate(layer_ids):
             if control is not None:
                 control.check()
@@ -996,13 +1467,20 @@ class RWKVCppBackend(RecurrentBackend):
             if not entries:
                 raise RuntimeError(f"provider has no entries for RWKV layer {layer_id}")
             self._upload_provider_layer(provider, layer_id, entries, metrics)
-            activation_out = np.empty_like(activation)
             state_in = self._layer_states[index]
-            state_out = np.empty_like(state_in)
+            if use_sequence:
+                assert sequence_activation_scratch is not None
+                assert sequence_state_scratch is not None
+                activation_out = sequence_activation_scratch[index & 1]
+                state_out = sequence_state_scratch
+            else:
+                activation_out = np.empty_like(activation)
+                state_out = np.empty_like(state_in)
             started = time.perf_counter()
             if use_sequence:
                 if index == 0:
-                    v_first_out = np.empty_like(activation)
+                    assert sequence_v_first_scratch is not None
+                    v_first_out = sequence_v_first_scratch
                     self._model.layer_step_sequence(
                         int(layer_id),
                         activation,
@@ -1161,9 +1639,13 @@ class RWKVCppBackend(RecurrentBackend):
             token_started = time.perf_counter()
             next_id = sample_numpy(logits, temperature=temperature, greedy=greedy)
             out_ids.append(next_id)
-            self._state = self._layer_flat_state().copy()
-            self._last_logits = logits.copy()
             if control is not None:
+                # Preserve the state before applying the emitted token only
+                # for controlled generation, where cancellation can interrupt
+                # at this exact boundary.  The normal path publishes once at
+                # the end of the request.
+                self._state = self._layer_flat_state().copy()
+                self._last_logits = logits.copy()
                 control.emit(next_id)
             logits = self._layer_advance_token(
                 int(next_id),
@@ -1173,10 +1655,12 @@ class RWKVCppBackend(RecurrentBackend):
                 metrics,
                 control=control,
             )
-            self._last_logits = logits.copy()
+            if control is not None:
+                self._last_logits = logits.copy()
             _record_token_metrics(metrics, token_started, prefill_s=prefill_s)
         decode_s = time.perf_counter() - decode_t0
         self._state = self._layer_flat_state().copy()
+        self._last_logits = logits.copy()
         self._last_token_id = int(out_ids[-1] if out_ids else prompt_ids[-1])
         if metrics is not None:
             metrics.prefill_wall_s = prefill_s
@@ -1206,6 +1690,7 @@ class RWKVCppBackend(RecurrentBackend):
         del layers_already_synced
         out: list[int] = []
         current = int(state.last_token_id)
+        last_logits: np.ndarray | None = None
         control = make_generation_control(
             token_callback=token_callback,
             cancel_event=cancel_event,
@@ -1224,15 +1709,20 @@ class RWKVCppBackend(RecurrentBackend):
                 metrics,
                 control=control,
             )
-            self._last_logits = logits.copy()
+            last_logits = logits
             current = sample_numpy(logits, temperature=temperature, greedy=greedy)
             out.append(current)
-            self._state = self._layer_flat_state().copy()
-            self._last_logits = logits.copy()
             if control is not None:
+                # A controlled request must leave a resumable post-token
+                # state if its callback cancels the next iteration.  Skip the
+                # large copy for uninterrupted decode and publish at return.
+                self._state = self._layer_flat_state().copy()
+                self._last_logits = logits.copy()
                 control.emit(current)
             _record_token_metrics(metrics, token_started)
         self._state = self._layer_flat_state().copy()
+        if last_logits is not None:
+            self._last_logits = last_logits.copy()
         self._last_token_id = current
         if metrics is not None:
             metrics.decode_wall_s = time.perf_counter() - t0
@@ -1277,7 +1767,10 @@ class RWKVCppBackend(RecurrentBackend):
                 set_invalidator(invalidate)
         t0 = time.perf_counter()
         layer_started = False
-        cache_before = self.native_layer_cache_stats()
+        # Cache counters are diagnostic-only.  Avoid five ctypes calls before
+        # and after every layer upload when the caller did not request
+        # metrics, which is the hot path for direct backend users.
+        cache_before = self.native_layer_cache_stats() if metrics is not None else None
         if self._native_layer_streaming_active():
             begin_layer = getattr(self._bridge, "begin_layer", None)
             if callable(begin_layer):
@@ -1286,7 +1779,9 @@ class RWKVCppBackend(RecurrentBackend):
                 # provider decode/read path is skipped for this token.
                 ready = bool(begin_layer(layer_id))
                 layer_started = True
-                cache_after = self.native_layer_cache_stats()
+                cache_after = (
+                    self.native_layer_cache_stats() if metrics is not None else None
+                )
                 if ready:
                     if metrics is not None:
                         if metrics.layers:
@@ -1297,9 +1792,8 @@ class RWKVCppBackend(RecurrentBackend):
                         # distinct from the native tensor-level hit counter:
                         # provider read/decode/materialization was skipped.
                         metrics.native_decoded_cache_hits += 1
-                        self._record_native_layer_cache_delta(
-                            metrics, cache_before, cache_after
-                        )
+                        assert cache_before is not None and cache_after is not None
+                        self._record_native_layer_cache_delta(metrics, cache_before, cache_after)
                         metrics.native_layer_streaming = True
                     return
         set_borrowed_persistent = getattr(
@@ -1338,18 +1832,25 @@ class RWKVCppBackend(RecurrentBackend):
             tensors = load_native(entries)
         else:
             tensors = provider.load_layer_tensors_materialized(entries)
-        cache_before = self.native_layer_cache_stats()
+        cache_before = self.native_layer_cache_stats() if metrics is not None else None
         stats = self._bridge.upload_layer(
             layer_id,
             tensors,
             layer_started=layer_started,
         )
-        cache_after = self.native_layer_cache_stats()
+        cache_after = (
+            self.native_layer_cache_stats() if metrics is not None else None
+        )
         cache_delta = {
             key: max(0, int(cache_after.get(key, 0)) - int(cache_before.get(key, 0)))
             for key in ("hits", "misses", "evictions")
+        } if cache_before is not None and cache_after is not None else {
+            "hits": 0,
+            "misses": 0,
+            "evictions": 0,
         }
-        self._native_layer_cache_seen = cache_after
+        if cache_after is not None:
+            self._native_layer_cache_seen = cache_after
         if metrics is not None and metrics.layers:
             # ``load_layer_tensors_materialized`` owns the provider read row;
             # charge bridge conversion/upload to its staging bucket.
@@ -1358,9 +1859,10 @@ class RWKVCppBackend(RecurrentBackend):
             metrics.native_upload_bytes += int(stats.uploaded_bytes)
             metrics.native_packed_bytes += int(stats.packed_bytes)
             metrics.native_active_bytes += int(stats.active_bytes)
-            metrics.native_layer_cache_bytes = int(
-                cache_after.get("used_bytes", 0) or 0
-            )
+            if cache_after is not None:
+                metrics.native_layer_cache_bytes = int(
+                    cache_after.get("used_bytes", 0) or 0
+                )
             metrics.native_layer_cache_hits += cache_delta["hits"]
             metrics.native_layer_cache_misses += cache_delta["misses"]
             metrics.native_layer_cache_evictions += cache_delta["evictions"]
@@ -1644,6 +2146,7 @@ class RWKVCppBackend(RecurrentBackend):
         )
         t0 = time.perf_counter()
         sync_every_token = _sync_provider_every_token()
+        last_logits: np.ndarray | None = None
         if not layers_already_synced:
             self._sync_provider_layers(provider, by_layer, layer_ids, metrics)
         for _ in range(max(0, int(max_tokens))):
@@ -1656,15 +2159,17 @@ class RWKVCppBackend(RecurrentBackend):
                 last, current, next_state, None, use_numpy=True
             )
             current, next_state = next_state, current
-            self._last_logits = np.asarray(logits, dtype=np.float32).copy()
+            last_logits = np.asarray(logits, dtype=np.float32)
             last = sample_numpy(logits, temperature=temperature, greedy=greedy)
             out.append(last)
-            self._state = np.asarray(current, dtype=np.float32).copy()
-            self._last_logits = np.asarray(logits, dtype=np.float32).copy()
             if control is not None:
+                self._state = np.asarray(current, dtype=np.float32).copy()
+                self._last_logits = np.asarray(logits, dtype=np.float32).copy()
                 control.emit(last)
             _record_token_metrics(metrics, token_started)
         self._state = np.asarray(current, dtype=np.float32).copy()
+        if last_logits is not None:
+            self._last_logits = last_logits.copy()
         self._last_token_id = last
         if metrics is not None:
             metrics.decode_wall_s = time.perf_counter() - t0
@@ -1691,6 +2196,9 @@ class RWKVCppBackend(RecurrentBackend):
 
     def close(self) -> None:
         self._bridge = None
+        # Release any provider-backed packed head view before the engine closes
+        # the mmap/store that owns its bytes.
+        self._layer_packed_head = None
         if self._model is not None and hasattr(self._model, "free"):
             try:
                 self._model.free()

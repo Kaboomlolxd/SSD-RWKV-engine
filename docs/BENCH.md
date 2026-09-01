@@ -58,6 +58,7 @@ See ·.
 | **`bench_throughput.py`** | **Real** RWKV-7 (ChatRWKV): tok/s, `z_mb`, `provider_mb`, `vs_resident`, layer CSV | `python bench/bench_throughput.py --backend chatrwkv --heavy` |
 | **`bench_io_ceiling.py`** | **Inf-compute estimate** + **RAM frontier**: Pareto-best preset per `z` tier, I/O ceiling tok/s, Δtok/s/MB | `python bench/bench_io_ceiling.py --heavy` |
 | **`bench_f1_f3.py`** | **F1/F2/F3/F4/F5/F6 cold/warm acceptance** on real packs (ChatRWKV or native rwkv.cpp) | `python bench/bench_f1_f3.py --backend rwkvcpp --tiers F1,F2,F3,F4,F5` |
+| **`bench_rwkvcpp_weight_stationary.py`** | **Native rwkv.cpp CPU shared prefill/decode** versus independent sessions | `python bench/bench_rwkvcpp_weight_stationary.py --pack C:\prepared\runtime-pack --checkpoint C:\models\rwkv-model.bin` |
 | **`bench_backend_compare.py`** | **ChatRWKV vs rwkvcpp** (resident + streaming tiers) | `python bench/bench_backend_compare.py --max-tokens 16 --samples 3` |
 | **`bench_generate.py`** | **Synthetic** toy pack: resident / partial / streaming tok/s + RAM | `python bench/bench_generate.py --json` |
 | **`scripts/bench_tok_s.py`** | **Quick tok/s sweep** (resident + raw + F4 + F5). Use for one-shot comparisons without the full suite. F1-F3 (ram_budget_gb) tiers are intentionally skipped on small packs — see [§ RAM vs speed presets](THROUGHPUT_PLAN.md). | `python scripts/bench_tok_s.py --pack C:\prepared\reference-pack --checkpoint C:\models\rwkv-model.pth` |

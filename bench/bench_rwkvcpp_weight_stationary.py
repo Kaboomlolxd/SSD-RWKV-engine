@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Measure synthetic weight-stationary batching against independent sweeps.
-
-This is a CPU/Windows synthetic benchmark. It proves scheduler parity and
-weight-load amortization for the toy backend. Real ChatRWKV and native
-rwkv.cpp measurements live in their dedicated benchmark scripts.
-"""
+"""Compare native rwkv.cpp independent generation with shared CPU sweeps."""
 
 from __future__ import annotations
 
@@ -23,12 +18,24 @@ from rwkv_ssd.runtime.config import EngineConfig
 from rwkv_ssd.runtime.engine import InferenceEngine
 
 
-def _prompt_tokens(prompt: str) -> int:
-    return max(1, len(prompt.encode("utf-8")))
+def _config(pack: Path, checkpoint: Path, max_tokens: int) -> EngineConfig:
+    return EngineConfig(
+        pack_dir=Path(pack),
+        checkpoint_path=str(checkpoint),
+        backend="rwkvcpp",
+        mode="streaming",
+        device="cpu",
+        max_tokens=int(max_tokens),
+        greedy=True,
+        verify_hash=False,
+        prefetch_enabled=False,
+        cache_format="none",
+    )
 
 
-def run_weight_stationary_benchmark(
+def run(
     pack: Path,
+    checkpoint: Path,
     prompts: list[str],
     *,
     max_tokens: int = 8,
@@ -38,76 +45,75 @@ def run_weight_stationary_benchmark(
         raise ValueError("at least one prompt is required")
     if max_tokens < 0 or samples <= 0:
         raise ValueError("max_tokens must be non-negative and samples positive")
-    cfg = EngineConfig(
-        pack_dir=Path(pack),
-        backend="synthetic",
-        mode="streaming",
-        device="cpu",
-        max_tokens=int(max_tokens),
-        cache_format="none",
-        prefetch_enabled=False,
-    )
+
     independent_times: list[float] = []
     batch_times: list[float] = []
     independent_outputs: list[str] = []
     batch_outputs: list[str] = []
     batch_metrics: dict[str, object] = {}
-    with InferenceEngine(cfg) as independent:
-        for _ in range(samples):
+
+    for _ in range(samples):
+        with InferenceEngine(_config(pack, checkpoint, max_tokens)) as independent:
             started = time.perf_counter()
-            independent_outputs = [independent.generate(prompt) for prompt in prompts]
+            independent_outputs = [
+                independent.generate(prompt) for prompt in prompts
+            ]
             independent_times.append(time.perf_counter() - started)
-    with InferenceEngine(cfg) as batched:
-        for _ in range(samples):
+
+        with InferenceEngine(_config(pack, checkpoint, max_tokens)) as batched:
             started = time.perf_counter()
-            batch_outputs = batched.generate_batch(prompts, max_tokens=max_tokens)
+            batch_outputs = batched.generate_batch(
+                prompts, max_tokens=max_tokens
+            )
             batch_times.append(time.perf_counter() - started)
             batch_metrics = batched.metrics.to_dict()
-        n_layer = batched.backend.num_layers
 
     if independent_outputs != batch_outputs:
-        raise AssertionError("weight-stationary output differs from independent generation")
-    independent_sweeps = sum(_prompt_tokens(prompt) + max_tokens for prompt in prompts)
-    batch_sweeps = int(batch_metrics.get("weight_sweeps", 0))
-    independent_layer_loads = independent_sweeps * n_layer
-    batch_layer_loads = int(batch_metrics.get("weight_layer_loads", 0))
-    total_tokens = len(prompts) * max_tokens
+        raise AssertionError("rwkv.cpp batch output differs from independent output")
+
+    total_tokens = len(prompts) * int(max_tokens)
     independent_wall = statistics.median(independent_times)
     batch_wall = statistics.median(batch_times)
     return {
         "schema_version": 1,
-        "backend": "synthetic",
+        "backend": "rwkvcpp",
         "cpu_only": True,
         "batch_size": len(prompts),
-        "max_tokens": max_tokens,
-        "samples": samples,
+        "max_tokens": int(max_tokens),
+        "samples": int(samples),
         "outputs_match": True,
         "tokens_generated": total_tokens,
         "independent_wall_s_median": independent_wall,
         "batch_wall_s_median": batch_wall,
-        "independent_tok_s": total_tokens / independent_wall if independent_wall else 0.0,
+        "independent_tok_s": total_tokens / independent_wall
+        if independent_wall
+        else 0.0,
         "batch_tok_s": total_tokens / batch_wall if batch_wall else 0.0,
-        "independent_weight_sweeps": independent_sweeps,
-        "batch_weight_sweeps": batch_sweeps,
-        "independent_weight_layer_loads": independent_layer_loads,
-        "batch_weight_layer_loads": batch_layer_loads,
-        "layer_load_amortization": (
-            independent_layer_loads / batch_layer_loads if batch_layer_loads else 0.0
+        "wall_speedup": independent_wall / batch_wall if batch_wall else 0.0,
+        "batch_weight_sweeps": batch_metrics.get("weight_sweeps", 0),
+        "batch_weight_layer_loads": batch_metrics.get("weight_layer_loads", 0),
+        "batch_prefill_s": batch_metrics.get("batch_prefill_wall_s", 0.0),
+        "batch_decode_s": batch_metrics.get("batch_decode_wall_s", 0.0),
+        "scope": (
+            "native rwkv.cpp CPU layer-outer/session-inner prefill and decode; "
+            "normal-file/page-cache evidence, not physical SSD scaling"
         ),
     }
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--model", type=Path, required=True)
-    parser.add_argument("--prompts", default="a,longer prompt,third")
+    parser.add_argument("--pack", type=Path, required=True)
+    parser.add_argument("--checkpoint", type=Path, required=True)
+    parser.add_argument("--prompts", default="Hello,Hi")
     parser.add_argument("--max-tokens", type=int, default=8)
     parser.add_argument("--samples", type=int, default=3)
     parser.add_argument("--json-out", type=Path)
     args = parser.parse_args()
     prompts = [value for value in args.prompts.split(",") if value]
-    result = run_weight_stationary_benchmark(
-        args.model,
+    result = run(
+        args.pack,
+        args.checkpoint,
         prompts,
         max_tokens=args.max_tokens,
         samples=args.samples,

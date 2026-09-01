@@ -19,6 +19,8 @@ from rwkv_ssd.runtime.trinity_codebook import (
     codebook_kmeans,
     codebook_linspace,
     hadamard_round_trip,
+    hadamard_transform,
+    invert_hadamard_transform,
     invert_rotation,
     random_hadamard_matrix,
 )
@@ -115,6 +117,14 @@ def test_hadamard_round_trip() -> None:
     # H2 @ H2.T should be identity on the first 3072 rows/cols
     out = H2 @ H2.T
     assert np.allclose(out, np.eye(3072), atol=1e-4)
+
+
+def test_matrix_free_hadamard_matches_inverse_for_non_power_width() -> None:
+    rng = np.random.default_rng(4)
+    values = rng.normal(size=(5, 6)).astype(np.float32)
+    rotated = hadamard_transform(values, seed=17)
+    restored = invert_hadamard_transform(rotated, 6, seed=17)
+    np.testing.assert_allclose(restored, values, rtol=0, atol=1e-6)
 
 
 def test_hadamard_kmeans_better_than_kmeans() -> None:

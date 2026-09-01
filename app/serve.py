@@ -257,6 +257,41 @@ def _json_response(
     handler.wfile.write(data)
 
 
+def _drain_rejected_request_body(
+    handler: BaseHTTPRequestHandler, length: int
+) -> None:
+    """Consume a bounded prefix before closing an early-rejected request.
+
+    Windows can reset a connection that closes with unread request bytes even
+    after the response has been written.  Drain the body when it is already
+    available, but keep the read bounded so a client cannot turn the size
+    check into an unbounded slow-upload wait.
+    """
+    if length <= 0:
+        return
+    limit = max(64 * 1024, int(CTX.max_body_bytes) + 1)
+    remaining = min(int(length), limit)
+    connection = handler.connection
+    previous_timeout = connection.gettimeout()
+    try:
+        connection.settimeout(0.25)
+        while remaining > 0:
+            chunk = handler.rfile.read(min(64 * 1024, remaining))
+            if not chunk:
+                break
+            remaining -= len(chunk)
+    except (OSError, ValueError):
+        # The response still needs to be sent.  Any bytes that were not
+        # available within the short drain window will be discarded when the
+        # explicit Connection: close response is finalized.
+        pass
+    finally:
+        try:
+            connection.settimeout(previous_timeout)
+        except OSError:
+            pass
+
+
 def _sse_headers(handler: BaseHTTPRequestHandler) -> None:
     handler.send_response(200)
     handler.send_header("Content-Type", "text/event-stream")
@@ -521,6 +556,7 @@ class InferenceHandler(BaseHTTPRequestHandler):
             return
         if length > CTX.max_body_bytes:
             _server_stats().inc("requests_rejected")
+            _drain_rejected_request_body(self, length)
             _json_response(
                 self,
                 413,

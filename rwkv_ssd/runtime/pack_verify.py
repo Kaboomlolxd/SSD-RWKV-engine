@@ -30,6 +30,7 @@ def verify_pack(pack_dir: Path, *, check_hash: bool = True) -> tuple[bool, list[
         ok = False
 
     file_sizes: dict[Path, int] = {}
+    logical_sizes: dict[Path, int] = {}
     weight_paths: list[Path] = [manifest.weights_path]
     weight_paths.extend(
         path for path in manifest.shard_files if path not in weight_paths
@@ -45,10 +46,26 @@ def verify_pack(pack_dir: Path, *, check_hash: bool = True) -> tuple[bool, list[
         except OSError as exc:
             messages.append(f"FAIL: cannot stat weights file {path}: {exc}")
             ok = False
+    # Whole-pack compression preserves manifest offsets relative to the
+    # decompressed image, so bounds checks use the logical size while the
+    # physical file size above remains useful for the final report/hash.
+    if (
+        not manifest.is_sharded()
+        and str(manifest.meta.get("weights_compression", "")).lower() == "zstd"
+    ):
+        try:
+            logical_sizes[manifest.weights_path] = int(
+                manifest.meta["weights_uncompressed_bytes"]
+            )
+        except (KeyError, TypeError, ValueError):
+            messages.append(
+                "FAIL: zstd pack is missing a valid weights_uncompressed_bytes value"
+            )
+            ok = False
 
     for tensor in manifest.tensors:
         path = manifest.shard_path_for(tensor)
-        size = file_sizes.get(path)
+        size = logical_sizes.get(path, file_sizes.get(path))
         if size is None:
             messages.append(f"FAIL {tensor.name}: backing file not found: {path}")
             ok = False
