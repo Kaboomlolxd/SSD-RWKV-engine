@@ -216,8 +216,43 @@ def main() -> None:
     if args.json:
         print(json.dumps(result, indent=2))
     else:
+        print(f"CPU preflight for {result['pack']} using {result['backend']}")
+        identity = result.get("identity", {})
+        if identity.get("codec") is not None:
+            pack_id = identity.get("pack_identity_sha256") or "unavailable"
+            print(
+                "Artifact: "
+                f"codec={identity.get('codec')} "
+                f"layout={identity.get('pack_layout')} "
+                f"identity={pack_id}"
+            )
         for item in result["checks"]:
             print(f"{'PASS' if item['ok'] else 'FAIL'} {item['name']}: {item['detail']}")
+        failed = [item for item in result["checks"] if not item["ok"]]
+        if failed:
+            print("\nNext steps:")
+            hints = {
+                "pack": "Check that --pack points to a prepared runtime pack with manifest.json and weights.bin.",
+                "pack_integrity": "Recreate or restore the pack, then rerun rwkv-ssd-pack and preflight.",
+                "checkpoint": "Supply the original checkpoint with --checkpoint.",
+                "checkpoint_compatibility": "Use the checkpoint used to create this pack.",
+                "chatrwkv": "Install or clone ChatRWKV and set CHATRWKV_ROOT to its directory.",
+                "rwkvcpp_root": "Initialize/build backends/rwkvcpp_ref or set RWKVCPP_ROOT.",
+                "rwkvcpp_dll": "Build the rwkv.cpp shared library or set RWKVCPP_DLL to it.",
+                "ggml": "Convert the matching checkpoint to GGML or set RWKVCPP_GGML_PATH.",
+                "lut2_native": "Build/install the CPU LUT2 native extension required by this pack codec.",
+            }
+            emitted: set[str] = set()
+            for item in failed:
+                hint = hints.get(item["name"])
+                if hint:
+                    key = item["name"]
+                    if hint not in emitted:
+                        print(f"- {key}: {hint}")
+                        emitted.add(hint)
+            print("See docs/MODEL_IMPORT.md and docs/BACKENDS.md for the CPU setup steps.")
+        else:
+            print("\nPreflight passed. The pack and selected backend prerequisites are ready.")
     raise SystemExit(0 if result["passed"] else 1)
 
 

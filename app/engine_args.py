@@ -10,7 +10,7 @@ from rwkv_ssd.runtime.config import EngineConfig
 
 def add_engine_args(p: argparse.ArgumentParser, *, for_serve: bool = False) -> None:
     p.set_defaults(_engine_args_for_serve=for_serve)
-    p.add_argument("--model", required=for_serve, help="Runtime pack directory")
+    p.add_argument("--model", required=False, help="Runtime pack directory")
     p.add_argument("--config", help="Optional YAML config file")
     p.add_argument("--checkpoint", help="Original RWKV .pth for ChatRWKV")
     p.add_argument(

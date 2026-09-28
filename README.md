@@ -47,84 +47,57 @@ opt-in because raw mmap is faster on hot reads. Run
 
 ## Quick start
 
-Install the package with the development dependencies:
+Install the runtime and development checks:
 
 ```bash
 python -m pip install -e ".[dev]"
 ```
 
-Create a tiny synthetic pack and exercise resident and streaming modes:
-
-```bash
-python -m rwkv_ssd.tools.make_synthetic_pack --output ./demo_pack
-python -m app.cli --model ./demo_pack --backend synthetic --mode resident \
-  --prompt "Hello" --max-tokens 16
-python -m app.cli --model ./demo_pack --backend synthetic --mode streaming \
-  --prompt "Hello" --max-tokens 32 --metrics-csv layers.csv
-python -m pytest tests/ -q
-```
-
-For a real RWKV-7 checkpoint, pack it first and select the compatibility
-backend explicitly when you want ChatRWKV. The source checkpoint path below is
-an operator-provided input, not a repository asset:
-
-```bash
-python -m rwkv_ssd.tools.pack_runtime \
-  --input C:\\models\\rwkv-model.pth \
-  --output C:\\prepared\\rwkv-model.pack \
-  --model-family auto
-python -m app.cli --model C:\\prepared\\rwkv-model.pack \
-  --checkpoint C:\\models\\rwkv-model.pth \
-  --backend chatrwkv --mode streaming --strategy "cpu bf16" \
-  --prompt "Hello" --max-tokens 16
-```
-
-For rwkv.cpp, build the vendored reference backend and convert a matching
-GGML model as described in [`docs/BACKENDS.md`](docs/BACKENDS.md):
+Try the CPU command line with a tiny synthetic pack. This verifies the installation without requiring real model files:
 
 ```powershell
-cmake -S backends/rwkvcpp_ref -B backends/rwkvcpp_ref/build
-cmake --build backends/rwkvcpp_ref/build --config Release
-python -m app.cli --model C:\path\to\prepared-rwkv-model.pack --backend rwkvcpp `
-  --mode resident --prompt "Hello" --max-tokens 16
+python -m rwkv_ssd.tools.make_synthetic_pack --output .\demo_pack
+python -m app.cli --model .\demo_pack --backend synthetic --mode resident --prompt "Hello" --max-tokens 16
 ```
 
-For a non-resident pack whose 2-D matrices use `scale_u8_grouped`, the
-`rwkvcpp` backend automatically selects the CPU-native SG8 grouped-U8 graph.
-Use an operator-supplied prepared pack; the auto profile resolves a certified
-compact sibling only when that sibling and its certificate are present.
-The certificate is scoped to the measured short smoke; qualify longer
-generation before making broad production-quality claims. Use these overrides
-only for A/B tests:
+For a real RWKV checkpoint, make a pack and check which CPU backends your machine can use. Checkpoints, packs, tokenizers, and GGML files are supplied by the operator and stay outside this repository:
 
 ```powershell
-# Disable the native path and use the ordinary GGML upload route.
-$env:RWKVCPP_NATIVE_U8 = "0"
-
-# Re-enable it before testing packed-only residency.
-$env:RWKVCPP_NATIVE_U8 = "1"
-
-# Require shape-only GGML matrix residency for an all-grouped matrix pack.
-# The default is "auto"; this explicit value is useful for diagnostics.
-$env:RWKVCPP_NATIVE_U8_PACKED_ONLY = "1"
-python -m app.cli --model C:\path\to\prepared-rwkv-model.pack `
-  --checkpoint C:\path\to\matching-rwkv-model-FP16.bin `
-  --backend rwkvcpp --mode streaming --prompt "Hello" --max-tokens 16
+rwkv-ssd-pack `
+  --input C:\models\rwkv-model.pth `
+  --output C:\prepared\rwkv-model.pack `
+  --model-family auto `
+  --pack-layout layer_grouped
+rwkv-ssd doctor `
+  --pack C:\prepared\rwkv-model.pack `
+  --checkpoint C:\models\rwkv-model.pth
 ```
 
-Native grouped-U8 is CPU-only and is disabled when GGML accelerator offload
-is requested.  It is a compact performance path, not a blanket quality
-guarantee: qualify the exact checkpoint, pack, tokenizer, thread count, and
-generation length together.  See [`docs/BACKENDS.md`](docs/BACKENDS.md) for
-the ABI and measured 2.9B results.
+Doctor reports the host CPU and RAM, pack integrity, and backend files it can find. It recommends `rwkvcpp` when its native library and matching GGML model are available. That is the faster native CPU path. `chatrwkv` is the PyTorch reference path and needs ChatRWKV plus the original checkpoint. Doctor never changes the backend selection for you.
 
-The maintained runtime contract is RWKV-only: use `rwkvcpp` for the native
-CPU path, `chatrwkv` for parity/reference work, and `synthetic` for fixtures.
-Non-RWKV experiments remain source-level research and are deliberately not
-accepted by the CLI or service.
+Run one prompt from the terminal:
 
-Run `python -m rwkv_ssd.tools.preflight --help` before deployment to verify
-the pack, native LUT assets, and backend prerequisites.
+```powershell
+rwkv-ssd --model C:\prepared\rwkv-model.pack `
+  --backend chatrwkv --checkpoint C:\models\rwkv-model.pth `
+  --mode streaming --prompt "Hello" --max-tokens 32
+```
+
+After selecting a model with `--model` or `--config`, run `rwkv-ssd` without a prompt in a terminal to start an interactive chat. Use `--prompt-file PATH` for a one-shot prompt from a UTF-8 text file. For scripts, pass `--prompt` or `--prompt-file`; the command will not wait for input when stdin is piped.
+
+### Local browser chat
+
+Copy [`rwkv-ssd.example.yaml`](rwkv-ssd.example.yaml) to `rwkv-ssd.yaml`, edit the pack, checkpoint, and backend paths, then run:
+
+```powershell
+./run-rwkv-ssd.ps1
+```
+
+The script starts the service on `127.0.0.1` and opens the browser. You can also run `rwkv-ssd-serve --config rwkv-ssd.yaml --open-browser` from a terminal. The OpenAI-compatible API remains available at `/v1/chat/completions`. If you configure an API key, enter it in the browser's Connection section for that session.
+
+Use `--mode streaming` when the full model does not fit comfortably in RAM. Cache, residency, codec, and I/O tuning lives in the advanced notes in [`docs/PRESETS.md`](docs/PRESETS.md), [`docs/BACKENDS.md`](docs/BACKENDS.md), and [`docs/MODEL_IMPORT.md`](docs/MODEL_IMPORT.md).
+
+This getting-started path covers RWKV CPU inference. CUDA and other accelerator paths remain hardware-gated.
 
 ## Where to read next
 

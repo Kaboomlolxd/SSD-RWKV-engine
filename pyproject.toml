@@ -23,6 +23,7 @@ zstd = ["zstandard>=0.22.0"]
 rwkv-ssd = "app.cli:main"
 rwkv-ssd-serve = "app.serve:main"
 rwkv-ssd-preflight = "rwkv_ssd.tools.preflight:main"
+rwkv-ssd-doctor = "rwkv_ssd.tools.doctor:main"
 rwkv-ssd-pack = "rwkv_ssd.tools.pack_runtime:main"
 
 [tool.setuptools.packages.find]

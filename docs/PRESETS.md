@@ -1,5 +1,9 @@
 # Throughput presets and environment variables
 
+> Advanced CPU tuning reference. Most users should start with the CLI or
+> browser defaults, choose `resident` or `streaming`, and use `rwkv-ssd doctor`
+> before changing cache, I/O, or residency controls.
+
 > **Release qualification note (July 2026):** the measured Trinity LUT2
 > frontier below is a historical engineering reference, not a production
 > quality claim. The historical LUT2/shadow payloads were removed and are

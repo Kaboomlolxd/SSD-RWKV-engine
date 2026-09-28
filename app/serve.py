@@ -13,6 +13,7 @@ import sys
 import threading
 import time
 import uuid
+import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
@@ -24,6 +25,7 @@ from app.worker_pool import (
     WorkerPoolError,
     validate_worker_count,
 )
+from app.web_ui import CHAT_HTML
 from rwkv_ssd import __version__ as RWKV_SSD_VERSION
 from rwkv_ssd.backends.factory import ensure_v0_backend, supports_streaming_mode
 from rwkv_ssd.runtime.engine import InferenceEngine
@@ -507,6 +509,15 @@ class InferenceHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self) -> None:
+        if self.path.split("?", 1)[0] in {"/", "/index.html"}:
+            data = CHAT_HTML.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if self.path.rstrip("/") == "/health":
             _json_response(self, 200, _health_payload())
             return
@@ -1442,6 +1453,11 @@ def main() -> None:
     p = argparse.ArgumentParser(description="RWKV SSD HTTP server")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8080)
+    p.add_argument(
+        "--open-browser",
+        action="store_true",
+        help="Open the local chat page in your default browser",
+    )
     p.add_argument("--cors", action="store_true")
     p.add_argument(
         "--cors-origin",
@@ -1511,12 +1527,18 @@ def main() -> None:
     if CTX.lightning_url:
         CTX.engine = None
     else:
-        cfg = build_engine_config(args)
-        ensure_v0_backend(cfg.backend)
-        if cfg.mode != "resident" and not supports_streaming_mode(cfg.backend):
+        try:
+            cfg = build_engine_config(args)
+            ensure_v0_backend(cfg.backend)
+            if cfg.mode != "resident" and not supports_streaming_mode(cfg.backend):
+                raise ValueError(
+                    "partial|streaming requires rwkvcpp, synthetic, chatrwkv, or albatross backend"
+                )
+        except Exception as exc:
             raise SystemExit(
-                "partial|streaming requires rwkvcpp, synthetic, chatrwkv, or albatross backend"
-            )
+                f"Invalid service configuration: {exc}\n"
+                "Next step: run `rwkv-ssd doctor --pack <pack> --checkpoint <checkpoint>`."
+            ) from exc
         validate_worker_count(cfg, args.workers)
         CTX.state_store = _build_state_store_from_env()
         try:
@@ -1528,11 +1550,24 @@ def main() -> None:
                 state_store=CTX.state_store,
             ).start()
             CTX.engine = None
-        except BaseException:
+        except Exception as exc:
             if CTX.worker_pool is not None:
                 CTX.worker_pool.close()
                 CTX.worker_pool = None
-            raise
+            message = str(exc)
+            hint = (
+                "Check the pack with `rwkv-ssd doctor --pack <pack>` and verify "
+                "the selected backend's required files."
+            )
+            if isinstance(exc, MemoryError) or "out of memory" in message.lower():
+                hint = (
+                    "Try mode: streaming, a smaller model, or close other "
+                    "memory-heavy applications."
+                )
+            raise SystemExit(
+                f"Could not start the CPU inference service: {message}\n"
+                f"Next step: {hint}"
+            ) from exc
 
     InferenceHandler.server_version = f"rwkv-ssd/{RWKV_SSD_VERSION}"
     server = ThreadingHTTPServer((args.host, args.port), InferenceHandler)
@@ -1542,6 +1577,15 @@ def main() -> None:
         "(POST /v1/chat/completions, stream supported)",
         file=sys.stderr,
     )
+    if args.open_browser:
+        browser_host = "127.0.0.1" if args.host in {"0.0.0.0", "::"} else args.host
+        url = f"http://{browser_host}:{server.server_address[1]}/"
+        if args.host not in {"127.0.0.1", "localhost", "::1"}:
+            logger.warning(
+                "The browser UI is being served on a non-local interface at %s",
+                url,
+            )
+        webbrowser.open(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

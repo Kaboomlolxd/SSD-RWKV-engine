@@ -38,7 +38,7 @@ MODE_HELP = """
 Runtime modes:
   resident   - all weights cached in RAM; fastest, highest memory (reference path)
   partial    - embed/head + first/last layer resident; middle layers streamed
-  streaming  - per-token layer reads from weights.bin (synthetic or chatrwkv RWKV-7)
+  streaming  - per-token layer reads from weights.bin (synthetic, chatrwkv, rwkvcpp)
 
 Streaming options:
   --stream-layer-cache   retain a small hot set of block layers in model.z (LRU cap)
@@ -63,6 +63,10 @@ def _configure_stdout() -> None:
             reconfigure(errors="replace")
         except (OSError, ValueError):
             pass
+
+
+def _should_interact(prompt: str | None, forced: bool, stdin_is_tty: bool) -> bool:
+    return bool(forced or (prompt is None and stdin_is_tty))
 
 
 def build_config(args: argparse.Namespace) -> EngineConfig:
@@ -188,10 +192,13 @@ def build_config(args: argparse.Namespace) -> EngineConfig:
 def _run_interactive(engine: "InferenceEngine", prompt: str = "") -> None:
     """Small snapshot-oriented REPL for local daily-driver smoke use."""
     transcript = prompt.strip()
-    if transcript:
-        print(engine.generate(transcript), flush=True)
-    print("Commands: /save PATH, /load PATH, /switch PATH, /strip PATH, /list [DIR], /quit")
     has_state = False
+    if transcript:
+        answer = engine.generate(transcript)
+        print(answer, flush=True)
+        transcript = f"{transcript}\nAssistant:{answer}"
+        has_state = True
+    print("Commands: /save PATH, /load PATH, /switch PATH, /strip PATH, /list [DIR], /quit")
     while True:
         try:
             line = input("rwkv-ssd> ")
@@ -221,6 +228,7 @@ def _run_interactive(engine: "InferenceEngine", prompt: str = "") -> None:
 
                 data = _json.loads(path.read_text(encoding="utf-8"))
                 transcript = str(data.get("prompt", ""))
+                has_state = False
                 print(f"loaded stripped transcript from {path}")
             else:
                 engine.load_snapshot(path)
@@ -286,6 +294,12 @@ def validate_config(cfg: EngineConfig) -> None:
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] == "doctor":
+        from rwkv_ssd.tools.doctor import main as doctor_main
+
+        doctor_main(sys.argv[2:])
+        return
+
     from rwkv_ssd.runtime.errors import BackendNotAvailableError
 
     _configure_stdout()
@@ -298,7 +312,11 @@ def main() -> None:
     p.add_argument("--config", help="Optional YAML config file")
     p.add_argument("--model", help="Runtime pack directory (manifest + weights.bin)")
     p.add_argument("--checkpoint", help="Original RWKV .pth for ChatRWKV")
-    p.add_argument("--prompt", default="Hello", help="Input prompt")
+    prompt_group = p.add_mutually_exclusive_group()
+    prompt_group.add_argument("--prompt", help="Run one prompt and exit")
+    prompt_group.add_argument(
+        "--prompt-file", type=Path, help="Read a one-shot prompt from a UTF-8 text file"
+    )
     p.add_argument(
         "--mode",
         choices=["resident", "partial", "streaming"],
@@ -524,39 +542,88 @@ def main() -> None:
         cfg = build_config(args)
         validate_config(cfg)
     except BackendNotAvailableError as exc:
-        raise SystemExit(f"ERROR: {exc}") from exc
+        raise SystemExit(
+            f"ERROR: {exc}\nNext step: run `rwkv-ssd doctor` and install the selected backend's required files."
+        ) from exc
+    except Exception as exc:
+        raise SystemExit(f"Invalid model configuration: {exc}") from exc
+
+    prompt = args.prompt
+    if args.prompt_file:
+        try:
+            prompt = args.prompt_file.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise SystemExit(f"Cannot read prompt file {args.prompt_file}: {exc}") from exc
+    if prompt is not None and not prompt.strip():
+        raise SystemExit("Prompt is empty. Add text to --prompt or --prompt-file.")
+    interactive = _should_interact(prompt, args.interactive, sys.stdin.isatty())
+    if prompt is None and not interactive:
+        raise SystemExit(
+            "No prompt provided. Use --prompt, --prompt-file, or run in a "
+            "terminal for interactive chat."
+        )
 
     from rwkv_ssd.runtime.engine import InferenceEngine
+    from rwkv_ssd.runtime.errors import EngineError
 
-    with InferenceEngine(cfg) as engine:
-        if getattr(args, "load_snapshot", None):
-            engine.load_snapshot(args.load_snapshot)
-            print(
-                f"restored snapshot from {args.load_snapshot}",
-                file=sys.stderr,
-                flush=True,
+    print(
+        f"Loading {cfg.backend} CPU model from {cfg.pack_dir}...",
+        file=sys.stderr,
+        flush=True,
+    )
+    try:
+        with InferenceEngine(cfg) as engine:
+            if getattr(args, "load_snapshot", None):
+                engine.load_snapshot(args.load_snapshot)
+                print(
+                    f"restored snapshot from {args.load_snapshot}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            if interactive:
+                _run_interactive(engine, prompt or "")
+            else:
+                print("Generating...", file=sys.stderr, flush=True)
+                out = engine.generate(prompt or "")
+                print(out, flush=True)
+            if getattr(args, "json_metrics", False) and engine.metrics.layers:
+                import json as _json
+
+                print(_json.dumps(engine.metrics.to_dict(), indent=2))
+            elif engine.metrics.layers:
+                print("\n--- metrics ---")
+                print(engine.metrics.summary())
+            if getattr(args, "save_snapshot", None):
+                engine.save_snapshot(args.save_snapshot, prompt=prompt or "")
+                print(
+                    f"saved snapshot to {args.save_snapshot}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+    except (
+        BackendNotAvailableError,
+        EngineError,
+        MemoryError,
+        FileNotFoundError,
+    ) as exc:
+        message = str(exc)
+        lowered = message.lower()
+        if isinstance(exc, MemoryError) or "out of memory" in lowered:
+            hint = (
+                "Try --mode streaming, reduce the model size, or close other "
+                "memory-heavy applications."
             )
-        if getattr(args, "interactive", False):
-            _run_interactive(engine, args.prompt)
-            out = ""
+        elif "rwkv.cpp" in lowered or "ggml" in lowered or "dll" in lowered:
+            hint = (
+                "Run `rwkv-ssd doctor --pack <pack> --checkpoint <checkpoint>` "
+                "to check native CPU prerequisites, or select --backend "
+                "chatrwkv when available."
+            )
+        elif "pack" in lowered or "manifest" in lowered or "weights.bin" in lowered:
+            hint = "Check the pack path and run `rwkv-ssd doctor --pack <pack>` for integrity details."
         else:
-            print("Generating...", file=sys.stderr, flush=True)
-            out = engine.generate(args.prompt)
-            print(out, flush=True)
-        if getattr(args, "json_metrics", False) and engine.metrics.layers:
-            import json as _json
-
-            print(_json.dumps(engine.metrics.to_dict(), indent=2))
-        elif engine.metrics.layers:
-            print("\n--- metrics ---")
-            print(engine.metrics.summary())
-        if getattr(args, "save_snapshot", None):
-            engine.save_snapshot(args.save_snapshot, prompt=args.prompt)
-            print(
-                f"saved snapshot to {args.save_snapshot}",
-                file=sys.stderr,
-                flush=True,
-            )
+            hint = "Run `rwkv-ssd doctor --pack <pack>` to inspect the CPU setup."
+        raise SystemExit(f"ERROR: {message}\nNext step: {hint}") from exc
 
 
 if __name__ == "__main__":

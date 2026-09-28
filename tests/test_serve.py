@@ -168,6 +168,28 @@ def test_health_payload_exposes_runtime_diagnostics(synthetic_pack: Path) -> Non
         CTX.engine = None
 
 
+def test_local_chat_ui_is_served_and_uses_streaming_api(synthetic_pack: Path) -> None:
+    with _test_server(synthetic_pack) as (host, port):
+        conn = HTTPConnection(host, port, timeout=10)
+        conn.request("GET", "/")
+        response = conn.getresponse()
+        page = response.read().decode("utf-8")
+        assert response.status == 200
+        assert response.getheader("Content-Type").startswith("text/html")
+        assert "RWKV SSD" in page
+        assert "AbortController" in page
+        assert "stream: true" in page
+        conn.close()
+
+        conn = HTTPConnection(host, port, timeout=10)
+        conn.request("GET", "/health")
+        response = conn.getresponse()
+        health = json.loads(response.read().decode("utf-8"))
+        assert response.status == 200
+        assert health["ready"] is True
+        conn.close()
+
+
 def test_health_endpoint(synthetic_pack: Path) -> None:
     from app.serve import InferenceHandler
 

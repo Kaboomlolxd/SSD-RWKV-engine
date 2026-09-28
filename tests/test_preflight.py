@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import hashlib
 
-from rwkv_ssd.tools.preflight import run_preflight
+from rwkv_ssd.tools.preflight import main as preflight_main, run_preflight
 
 
 def test_synthetic_preflight_checks_pack_integrity(synthetic_pack) -> None:
@@ -56,6 +56,23 @@ def test_preflight_rejects_unknown_runtime_backend(synthetic_pack) -> None:
         item["name"] == "backend" and item["ok"] is False
         for item in result["checks"]
     )
+
+
+def test_preflight_text_output_has_remediation_for_missing_backend(
+    synthetic_pack, monkeypatch, capsys
+) -> None:
+    monkeypatch.setattr(
+        "sys.argv",
+        ["rwkv-ssd-preflight", "--pack", str(synthetic_pack), "--backend", "rwkvcpp"],
+    )
+    try:
+        preflight_main()
+    except SystemExit as exc:
+        assert exc.code == 1
+    output = capsys.readouterr().out
+    assert "CPU preflight" in output
+    assert "Convert the matching checkpoint to GGML" in output
+    assert "Next steps:" in output
 
 
 def test_preflight_accepts_rwkv_backend_aliases(synthetic_pack) -> None:
