@@ -17,6 +17,7 @@ from rwkv_ssd.runtime.tensor_loader import dtype_from_entry
 from rwkv_ssd.runtime.trinity_codec import (
     _lut2_inner_view,
     decode_trinity_lut2_to_tensor,
+    is_hadamard_lut2_blob,
     is_grouped_lut2_blob,
 )
 
@@ -61,7 +62,7 @@ def decode_lut2_layer_cpu_fast(
         return {}
     ordered = sorted(entries, key=lambda e: e.offset)
     blobs = [raw[e.offset - base : e.offset - base + e.length] for e in ordered]
-    if any(is_grouped_lut2_blob(blob) for blob in blobs):
+    if any(is_grouped_lut2_blob(blob) or is_hadamard_lut2_blob(blob) for blob in blobs):
         return {
             entry.name: decode_trinity_lut2_to_tensor(blob, entry, device)
             for entry, blob in zip(ordered, blobs, strict=True)

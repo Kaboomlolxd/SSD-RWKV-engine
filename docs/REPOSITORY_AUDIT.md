@@ -1,6 +1,6 @@
 # Repository audit
 
-Audit date: **2026-08-04**
+Audit date: **2026-09-01**
 Scope: working tree at `main`, including the Python engine, local serving
 surface, native/submodule paths, pack and quantization flow, benchmarks,
 deployment examples, tests, research artifacts, and documentation.
@@ -22,6 +22,11 @@ compact 2.9B selector now resolves to the grouped-U8 g32 pack, and that exact
 selector has a manifest-bound three-prompt logits/state smoke certificate. The
 certificate is valid for its declared scope; it is not evidence for long
 generation, broad prompt coverage, or an SLO.
+
+The September 1 CPU continuation also passes the focused optimization probes
+and a six-prompt/32-position teacher-forced native quality probe. Those results
+strengthen CPU implementation evidence but do not change the certificate's
+manifest-bound scope or qualify held-out/free-running generation.
 
 The release boundary is therefore:
 
@@ -107,7 +112,7 @@ family, device, mode, pack codec, native ABI, and quality certificate.
 | `synthetic` | Deterministic resident/partial/streaming pack execution, batching, sampling, state, and metrics. | Full CPU unit/e2e golden coverage. | Not a language-model quality or performance baseline. |
 | `chatrwkv` | RWKV-7 PyTorch resident and pack-streaming path, F tiers, state cache, batching, DeepEmbed handling, CPU/XPU split. | Strongest reference for pack parity; real fixtures are opt-in/asset-dependent. | More sustained real-model qualification and a fused qkv/DEA production path. |
 | `rwkvcpp` resident | Native GGML resident inference with matching converted `.bin`; explicit native thread policy and state/snapshot bridge. | Native CTest 8/8; local real-model comparisons; backend tests. | Pin and publish the exact native ABI/source revision and conversion recipe. |
-| `rwkvcpp` provider streaming | Layer-local native plan, provider upload, persistent/transient dense borrowing, native cache accounting, grouped-U8 packed-only graph. | 0.1B conformance/F-tier gates and 2.9B native throughput/memory gates. | Long-run quality, cold-start/prefill/concurrency SLOs, and clean dependency provenance. |
+| `rwkvcpp` provider streaming | Layer-local native plan, provider upload, CPU shared-sweep batching, persistent/transient dense borrowing, native cache accounting, grouped-U8 packed-only graph. | 0.1B conformance/F-tier and two-session batch parity gates plus 2.9B native throughput/memory gates. | Long-run quality, broader batch-size/cold-start/prefill/concurrency SLOs, and clean dependency provenance. |
 | `albatross` | External layer-wise CUDA adapter over `ManifestWeightProvider`; dense materialization supports the existing pack codecs and F1-F5 cache lifecycle. | Static/import checks and explicit unavailable errors on CPU; CUDA execution is not locally tested. | Compatible Albatross checkout, greedy parity, sustained quality/throughput, and CUDA memory gates. |
 | external engines | `app/lightning_proxy.py` is an HTTP proxy/reference hook, not an in-process backend. | No engine quality claim. | Treat as an integration boundary with its own service/SLO contract. |
 
@@ -155,8 +160,8 @@ to promote a lossy pack.
 
 The repository has unusually broad contract coverage for the CPU engine:
 
-- full Python collection currently contains **595 tests**;
-- the latest current full local gate is **577 passed, 18 skipped in 173.91 s**
+- full Python collection currently contains **618 tests**;
+- the latest current full gate is **600 passed, 18 skipped in 186.79 s**
   using `pytest --override-ini "addopts="`; the slowest calls are the
   RWKV7a DeepEmbed parity checks (55.31 s and 32.49 s), so a short CI timeout
   is not an adequate full-gate budget;
@@ -166,8 +171,8 @@ The repository has unusually broad contract coverage for the CPU engine:
   grouped/native bridge behavior;
 - `compileall`, `pip check`, wheel inspection, JSON parsing, and `git diff
   --check` have passed in the current remediation record;
-- the former vendored native **8/8** record is historical and does not qualify
-  the newly pinned public upstream revision.
+- the current local native gate is **8/8**; publication and reproducibility of
+  the nested upstream revision remain release work.
 
 The test suite proves code contracts, not universal hardware support. Real
 checkpoint tests are often skipped unless local `.pth`, `.bin`, or
@@ -257,7 +262,7 @@ were moved or never existed, including the old planning and Albatross notes.
 Those links do not affect runtime, but they should either be redirected to the
 archived path or labeled as historical in a later documentation cleanup. The
 milestone ledger also contains older snapshot counts; its current gate is the
-August 24, 2026 **577/18** Python record. Native qualification must be rerun
+September 1, 2026 **600/18** Python record. Native qualification must be rerun
 against the newly public upstream submodule pin before publishing a new CTest
 count.
 
@@ -268,10 +273,11 @@ Before promoting a general release, close these gates in order:
 1. **Reproducible source:** commit `.gitmodules`; pin the exact submodule
    revisions containing the native ABI; make the ChatRWKV dependency strategy
    explicit; build native binaries from a clean checkout.
-2. **Reproducible artifacts:** publish a model/pack manifest with checkpoint,
-   tokenizer, pack, GGML, native DLL, compiler, and host hashes. Make the
-   default selector fail with a clear install message when the local artifact
-   is absent.
+2. **Reproducible artifacts:** the CPU packer records a source checkpoint hash,
+   and preflight reports checkpoint, tokenizer, pack, codec, and native ABI
+   identities. Publication still needs a complete model/pack/GGML/DLL/compiler
+   and host manifest; the default selector must fail with a clear install
+   message when the local artifact is absent.
 3. **Default compact quality:** run the g32 selector on held-out prompts and
    sustained generations (not only three short probes), compare greedy and
    sampled behavior to the resident reference, and issue a new certificate

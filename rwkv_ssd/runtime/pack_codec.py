@@ -84,10 +84,18 @@ def _unpack_scale_u4(packed: np.ndarray, numel: int) -> np.ndarray:
     if packed.size < need:
         raise ValueError(f"scale_u4 packed short: {packed.size} vs {need}")
     packed = packed[:need]
-    pos = np.arange(numel, dtype=np.intp)
-    # encode: high nibble first weight, low nibble second (per byte)
-    shift = np.where(pos % 2 == 0, 4, 0).astype(np.intp)
-    return (packed[pos // 2] >> shift) & 0x0F
+    # Decode complete bytes in pairs.  The previous implementation built a
+    # per-element position and shift array; those allocations dominate small
+    # streamed tensors and are unnecessary for this fixed nibble layout.
+    out = np.empty(numel, dtype=np.uint8)
+    pairs = numel // 2
+    if pairs:
+        values = packed[:pairs]
+        out[: pairs * 2 : 2] = values >> 4
+        out[1 : pairs * 2 : 2] = values & 0x0F
+    if numel & 1:
+        out[-1] = packed[pairs] >> 4
+    return out
 
 
 def decode_scale_to_tensor(
@@ -131,21 +139,48 @@ def decode_scale_u8_grouped_to_tensor(
         groups, 2
     )
     quant = np.frombuffer(data, dtype=np.uint8, offset=scales_end, count=entry.numel)
-    values = np.empty(entry.numel, dtype=np.float32)
-    batch_groups = max(1, 1_000_000 // group_size)
-    for first in range(0, groups, batch_groups):
-        count = min(batch_groups, groups - first)
-        start = first * group_size
-        available = min(count * group_size, entry.numel - start)
-        q = quant[start : start + available].astype(np.float32)
-        group_ids = np.arange(available, dtype=np.intp) // group_size
-        batch = scales[first : first + count]
-        values[start : start + available] = (
-            batch[group_ids, 0]
-            + (batch[group_ids, 1] - batch[group_ids, 0]) * (q / 255.0)
-        )
+    values = _decode_grouped_u8_values(quant, scales, group_size)
     t = torch.from_numpy(values).reshape(entry.shape).to(dtype=dtype_from_entry(entry))
     return t if device.type == "cpu" else t.to(device=device)
+
+
+def _decode_grouped_u8_values(
+    quant: np.ndarray, scales: np.ndarray, group_size: int
+) -> np.ndarray:
+    """Decode SG8 values with a broadcasted CPU kernel-friendly layout.
+
+    The previous implementation built a per-element group-id array and used
+    advanced indexing for every batch.  That is correct, but it adds a sizable
+    allocation and indexing pass to every streamed tensor.  Reshaping complete
+    groups lets NumPy use contiguous broadcasted multiply/add operations.  The
+    final partial group is handled separately because packers do not pad the
+    on-disk payload.
+    """
+    if group_size <= 0:
+        raise ValueError("group_size must be positive")
+    if quant.size == 0:
+        return np.empty(0, dtype=np.float32)
+    groups = (quant.size + group_size - 1) // group_size
+    if scales.shape[0] != groups:
+        raise ValueError(f"scale group count mismatch: {scales.shape[0]} vs {groups}")
+
+    values = np.empty(quant.size, dtype=np.float32)
+    full_groups, remainder = divmod(quant.size, group_size)
+    if full_groups:
+        q = quant[: full_groups * group_size].astype(np.float32).reshape(
+            full_groups, group_size
+        )
+        out = values[: full_groups * group_size].reshape(full_groups, group_size)
+        delta = (scales[:full_groups, 1] - scales[:full_groups, 0]) * (1.0 / 255.0)
+        np.multiply(q, delta[:, None], out=out)
+        np.add(out, scales[:full_groups, 0, None], out=out)
+    if remainder:
+        start = full_groups * group_size
+        q = quant[start:].astype(np.float32)
+        mn = scales[full_groups, 0]
+        delta = (scales[full_groups, 1] - mn) * (1.0 / 255.0)
+        values[start:] = mn + q * delta
+    return values
 
 
 def decode_scale_u8_grouped_to_bytes(data: bytes, entry: TensorEntry) -> bytes:

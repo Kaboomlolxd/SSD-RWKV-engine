@@ -8,7 +8,7 @@ Use this as the checklist for releases. If a milestone is not met, do not start 
 
 ---
 
-## Status snapshot (June 2026)
+## Status snapshot (September 1, 2026)
 
 | Milestone | Done? | Notes |
 |-----------|-------|-------|
@@ -17,8 +17,9 @@ Use this as the checklist for releases. If a milestone is not met, do not start 
 | M5 scale_u8/u4 | Yes | Trinity on path separately (not promoted as default) |
 | M7 HTTP | Yes | `app/serve.py` |
 | V1.5 throughput (FP16) | Yes | Decouple + promote closes resident gap |
-| V1.5 throughput (Trinity CPU) | Partial | F5 promote OK; **F1–F4 still decode/staging bound** |
+| V1.5 throughput (Trinity CPU) | Yes for the native CPU gate | rwkv.cpp F1–F4 cold/warm ratios and memory budgets pass; long-run lossy quality remains open |
 | Trinity overhead P0/P1 | Yes | Batched TMix, warm cache default, layer-span fused, partial tier default |
+| CPU optimization continuation | Yes for measured safe paths | grouped decode, DeepEmbed lookup/batching, sequence scratch reuse, state-publication elision, and opt-in zstd/packed-head A/B paths |
 | **M6 GPU compute + SSD offload** | No | **Primary tok/s track** — Albatross, FLUTE CUDA, GDS |
 | M6d Intel iGPU / XPU dev | Partial | Trinity XPU decode experimental |
 | 200B / 10 GB RAM thesis | Partial | `--ram-budget-gb`; byte LRU shipped |
@@ -95,7 +96,7 @@ Measure what you control. Report **per-layer** and **per-token** breakdowns, not
 | Logging | INFO: load pack, mode, tokens/s summary; WARN on fallback | Structured JSON logs |
 | Metrics | `--metrics-csv` per-layer timings on streaming path | Prometheus / HTTP `/metrics` |
 | Versioning | `manifest.json` has `version`; incompatible pack rejected | Migration tool |
-| Reproducibility | `meta.json` records source checkpoint path / hash | Locked manifest in release |
+| Reproducibility | `meta.json` records source checkpoint label / hash; preflight reports pack, tokenizer, and native identities | Locked manifest in release |
 | Repo hygiene | Engine vs `simulations/` clearly separated | CI runs verify_pack + smoke test |
 | Release tags | Git tag `v0.x` with short CHANGELOG for milestones | Stable / preview channels |
 

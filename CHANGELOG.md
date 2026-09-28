@@ -2,11 +2,60 @@
 
 ## Unreleased
 
+- **CPU decode cleanup:** grouped-U8 decode now gathers complete codebook
+  groups with NumPy instead of dispatching once per group (**5.05×** on the
+  current 4.2M-element A/B probe); fixed-nibble U4 unpacking also avoids
+  per-element index/shift arrays (**4.63×** for grouped LUT2). These changes
+  preserve the existing blob formats.
+- **Opt-in Hadamard+k-means codec:** added the self-describing CPU-only
+  `TR2\x08` format and matrix-free randomized Walsh-Hadamard encode/decode,
+  exposed as `--trinity-codebook hadamard_kmeans` for research. On the local
+  768×768 probe it improved SNR by about 1 dB but expanded the payload by 33%
+  and raised decode time from about 0.9 ms to 63 ms, so no default CPU preset
+  selects it.
+- **Whole-pack zstd safety:** unknown-content-size frames now use a streaming
+  fallback, and raw-offset sharding/placement tools reject compressed sources
+  with an actionable error.
+- **DeepEmbed CPU path:** qkv/DEA sidecar lookup now reads only requested mmap
+  rows instead of cloning the full vocabulary table. Added shared-layer prompt
+  prefill and decode reference paths with exact state/logit parity; the
+  maintained two-session probe is **1.17×** faster with **50% fewer layer
+  loads**, while focused multi-layer probes reached **1.28–1.75×**. The
+  production fused qkv/DEA path remains intentionally open.
+- **CPU generation overhead:** uninterrupted decode now publishes recurrent
+  state/logits once at request completion, while callbacks, cancellation, and
+  deadlines retain the pre-token snapshots needed for resumption. The native
+  layer backend also supports the explicit
+  `RWKVCPP_NATIVE_LAYER_PACKED_HEAD=1` memory-saving mode; it remains opt-in
+  because packed vocabulary GEMV measured slower than dense BLAS.
+- **DeepEmbed decode overhead:** single-token qkv/DEA decode now skips the
+  redundant causal mask, one-row sequence temporaries, and one-iteration
+  recurrent Python loop; streamed manifest entry filtering is cached. The
+  exact prompt/multi-token path remains unchanged, and the maintained CPU
+  reference batch probe now measures about 1.17x versus independent sessions
+  with the same 50% layer-load reduction.
+- **Native sequence prefill reuse:** rwkv.cpp now reuses activation, recurrent
+  state, and `v_first` scratch buffers across native layer-sequence prefill,
+  avoiding large per-layer allocations while preserving the older-DLL fallback.
+- **Native CPU batch prefill/decode:** rwkv.cpp now performs a
+  layer-outer/session-inner shared sweep through the native layer ABI, so each
+  prompt layer is uploaded once per batch and older DLLs fall back to the token
+  ABI under the same schedule. A real 0.1B two-session warm probe
+  matched independent greedy output. Repeatable local runs measured
+  2.67–3.27 aggregate tok/s versus 1.34–1.60 tok/s independently. This is a capacity optimization;
+  broader batch-size, quality, and service-concurrency qualification remains.
+- **Quality evidence:** a supplemental 2.9B grouped-U8 probe covering 6 prompts
+  and 32 teacher-forced positions per prompt passed the configured gates
+  (top-10 **0.90**, KL **0.010936**, state relative L2 **0.034156**). The
+  manifest-bound certificate remains intentionally scoped to its original
+  three-prompt/eight-position evidence.
+
 - **2.9B grouped-U8 default promotion (July 31, 2026):** promoted
   `test_model/runtime_pack_2.9b` to the stable 2.9B compact selector. Its
   automatic profile resolves to the g32 grouped-quality payload only when the
   manifest-bound short-smoke certificate is present; the exact scope passes
-  KL `0.010936`, top-10 overlap `0.90`, and state drift `0.01500`. Longer
+  KL `0.010936`, top-10 overlap `0.90`, and state relative L2 `0.034156`.
+  Longer
   held-out generation qualification remains open.
 
 ## 0.6.16 - 2026-07-28

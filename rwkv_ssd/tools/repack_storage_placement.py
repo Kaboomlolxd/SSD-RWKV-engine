@@ -25,6 +25,11 @@ def repack_storage_placement(src: Path, dst: Path, plan: dict) -> dict:
     manifest = Manifest.load(src)
     if manifest.is_sharded():
         raise ValueError("placement repack currently requires a single-file source pack")
+    if str(manifest.meta.get("weights_compression", "")).strip().lower() == "zstd":
+        raise ValueError(
+            "placement repack does not read compressed zstd packs: tensor offsets "
+            "refer to the decompressed image; decompress/repack first"
+        )
     mapping = {
         int(item["layer_id"]): str(item["drive"])
         for item in plan.get("placements", [])

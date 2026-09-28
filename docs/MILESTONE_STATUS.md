@@ -4,16 +4,16 @@ The long-term roadmap target remains GPU inference with SSD-backed weights.
 That target is not the current release posture; the current release is
 CPU-first and is defined in [`PROJECT_STATUS.md`](PROJECT_STATUS.md).
 
-## Current release gate (last verified August 24, 2026)
+## Current release gate (last verified September 1, 2026)
 
-The complete local Python gate passed **577 tests**, with 18 skipped. The run
+The complete local Python gate passed **600 tests**, with 18 skipped. The run
 used `python -m pytest -q --override-ini "addopts="`, so it included marked
 parity and serving checks. Native qualification must be rerun against the
 newly public upstream submodule pin.
 This ledger keeps historical milestone numbers below; [`PROJECT_STATUS.md`](PROJECT_STATUS.md)
 is the current recommendation source.
 
-Current verification: **August 24, 2026** — full local Python suite **577
+Current verification: **September 1, 2026** — full local Python suite **600
 passed, 18 skipped**.
 
 The **July 28, 2026** result of **634 passed, 22 skipped** and the earlier
@@ -42,7 +42,7 @@ accelerator claims remain hardware-gated.
 
 **Production target:** **GPU inference** (CUDA datacenter / consumer NVIDIA) with **weights on SSD** when VRAM is bounded. Current dev machine lacks discrete NVIDIA GPU; **CPU + Intel iGPU** is the correctness and preset-tuning path. GPU wins (M6, FLUTE CUDA, DeepNVMe GDS) are **first-class milestones**, not optional.
 
-## Current CPU implementation status (July 31, 2026)
+## Current CPU implementation status (September 1, 2026)
 
 The CPU parity and low-RAM portions of the current plan are implemented and
 green on the checked-in fixture. ChatRWKV resident/pack streaming and
@@ -59,6 +59,19 @@ larger 2.9B grouped-U8 diagnostic F1-F4 are 1.90-2.25 tok/s and remain inside
 the explicit 12 GB RSS, 1 GiB provider, and 512 MiB native-layer budgets.
 The 2.9B result is not a quality promotion.
 
+The supplemental native quality probe covered six prompts and 32
+teacher-forced autoregressive positions per prompt and passed the configured
+gates (top-10 0.90, KL 0.010936, state relative L2 0.034156). The existing
+manifest-bound certificate remains scoped to three prompts and eight positions
+per prompt; held-out, sustained, and free-running qualification remain open.
+
+The same native layer ABI now supports CPU layer-outer/session-inner batch
+prefill and decode. A real 0.1B two-session warm probe produced exact greedy parity and
+2.67–3.27 aggregate tok/s versus 1.34–1.60 tok/s for independent generation.
+The result qualifies shared scheduling capacity only; larger batch sizes,
+longer runs, variable-length prompt measurements, and concurrent-service limits
+remain open.
+
 HTTP serving now has a bounded spawned process-worker pool, versioned state
 envelopes, worker health/restart handling, cancellation acknowledgements, and
 aggregated queue/latency/RSS metrics; the default remains one worker.
@@ -69,6 +82,10 @@ DeepEmbed variant detection now distinguishes the qkv/DEA sidecar contract
 from RWKV7a DeepEmbed-v1. The latter uses upstream ChatRWKV's
 `RWKV_DE_VERSION=1` path and is supported for resident inference and CPU
 layer streaming; qkv/DEA now has a sidecar-backed CPU reference stream.
+Its CPU reference batch path now shares each ordinary layer across independent
+session states for both variable-length prompt prefill and one-token decode
+steps, with exact parity covered by the current test suite; the fused
+production path remains open.
 Verification for this slice includes DeepEmbed/capability tests and the real
 RWKV7a resident vs
 streaming parity gate; see
@@ -104,6 +121,7 @@ measurements, and new quantization codecs without measured quality evidence.
 | **F3 provider cache size** | **Done (June 29, F-3)** — five tier defaults hardcoded `max_provider_cache_layers=2` (16.7% hit rate on 0.1B; 56.8 ms/tok of bridge). Removed the hardcodes; `resolve_max_provider_cache_layers` now picks full cache for n>=8 decoupled. |
 | **M-class sharded pack** (multi-SSD) | **Done (June 29)** — `python -m rwkv_ssd.tools.shard_pack --shards N` splits the pack into N files. `ShardedWeightStore` reads in parallel via `ThreadPoolExecutor`. For 0.1B the pack fits in page cache (no speedup); for 7B+ where the SSD is the bottleneck, K SSDs give up to Kx aggregate read bandwidth. [`docs/SSD_EXPLOITATION.md`](SSD_EXPLOITATION.md) |
 | **Manifest-v2 striped sharding** | **Done on CPU (July 10)** — exact logical/physical validation, adjacent extent coalescing, provider integration, and BF16 shadow shard writing/gather/decode. Physical multi-SSD scaling remains hardware-gated. [`docs/SSD_STREAMING_FRONTIER.md`](SSD_STREAMING_FRONTIER.md) |
+| **Optional zstd cold-pack storage** | **Done on CPU (August 31)** — `pack_runtime --compress zstd`, logical-offset validation, transparent one-shot host expansion, and mmap/pread/threaded API parity. Opt-in because hot page-cache reads benchmark faster uncompressed. |
 | **Explicit cache-format/F profiles** | **Done (July 10)** — `cache_format`, packed/prepared byte caps, and expanded cache telemetry separate dense `z`, prepared tensors, packed LUT blobs, and LUT2 indices. |
 | **CUDA event-owned staging ring** | **Foundation (July 10)** — three-slot CUDA ring with event ownership; provider overlap consumer is gated for the GPU benchmark slice. |
 | **CMix selective reads** | **Done on CPU (July 10)** — opt-in telemetry plus an explicit row-tiled value-matrix sidecar, exact selective matmul, and tile/byte read metrics. Existing dense/LUT packs safely fall back. |
@@ -113,12 +131,13 @@ measurements, and new quantization codecs without measured quality evidence.
 | **DeepEmbed variant-aware packing** | **Done on CPU (July 15)** — qkv/DEA emits `DeepEmbed.bin`; RWKV7a-v1 keeps `s_emb`/`s_emb_x` in packed tensors and records `deepembed_streaming_supported=true`. |
 | **RWKV7a DeepEmbed-v1 resident + CPU streaming** | **Done on CPU (July 15)** — native ChatRWKV `RWKV_DE_VERSION=1`, skeleton/provider row derivation, greedy parity for `"Hi"` under the shared prefill/decode contract. |
 | **qkv/DEA DeepEmbed CPU streaming** | **Done as a reference path (July 15)** — sidecar rows plus provider-loaded ordinary layers match the resident reference; fused production path remains open. |
+| **qkv/DEA DeepEmbed CPU batch prefill/decode** | **Done as an optimized reference path (August 31)** — independent prompt prefill and one-token decode use shared layer-outer/session-inner sweeps; exact state/logit parity is covered by regression tests. The current two-session CPU probe is 1.17x faster with 50% fewer layer loads; focused multi-layer probes reached 1.28–1.75x. Fused production kernel remains a separate qualification gate. |
 | **F1–F4 vs F5 gap** | **Closed for the native rwkv.cpp gate** — the current 0.1B and 2.9B cold/warm acceptance matrices meet the requested ratios and memory budgets. The older ChatRWKV/Python-dispatch figures in this historical table remain useful for explaining why the native layer-local path was required. |
 | M2.5 prefix state cache | **Done** |
-| Low-RAM / 200B thesis path | **Partial** — `--ram-budget-gb`, partial hot3; byte LRU shipped v0.6.11. **Open:** over-throttles on small models (F1-F3 on 0.1B report <F4/F5). |
+| Low-RAM / 200B thesis path | **Partial** — `--ram-budget-gb`, partial hot3, and byte LRU are shipped; small-model over-throttling was fixed. Large-model/200B qualification remains open. |
 | **M6 GPU compute** (Albatross / FLUTE CUDA / rwkv_lightning) | **Not started** — **next major track** |
 | **rwkvcpp phase 1** (resident ggml CPU) | **Done** — DLL wired, `bench_backend_compare.py`, ~59 tok/s 0.1B resident |
-| **rwkvcpp streaming (M5)** | **Done for the native layer ABI** — bounded layer plan, dense/grouped-U8 uploads, chunked prefill, provider scheduling, and F-tier metrics are implemented; longer 2.9B quality certification remains open. |
+| **rwkvcpp streaming (M5)** | **Done for the native layer ABI** — bounded layer plan, dense/grouped-U8 uploads, chunked prefill, provider scheduling, reusable scratch, optional fixed upload slots, and F-tier metrics are implemented; longer 2.9B quality certification remains open. |
 | **M6a-M6c + sharded pack** (multi-SSD) | 7B+ packs on multi-socket with NVMe bifurcation | M6-class future |
 | **M6b GPU↔SSD** (GDS / DeepNVMe patterns, layer swapper) | **Research** — |
 | Intel iGPU / XPU Trinity decode | **Experimental** — `RWKV_TRINITY_DECODE_DEVICE=xpu` |
@@ -140,7 +159,7 @@ These are intentional shifts discovered while closing the streaming throughput g
 | State cache = serving win for HTTP first | Prefix cache skips **prefill**, not per-token weight loads | **`--state-cache` + `--system-prefix`** on ChatRWKV streaming; biggest win on repeated system prompts |
 | Shadow = optional bench trick | LUT2 decode is the Trinity tok/s bottleneck | **Auto `RWKV_DECODE_SHADOW=1`** when `shadow.bin` exists; trades disk for decode speed |
 | Throughput phase “complete” at v0.6.0 | Trinity LUT2 still far from FP16 without shadow/promote | Extended **v0.6.7–v0.6.10**; `tok_s_compare.json` is **stale** (pre-promote) |
-| `max_layers_in_z` = layer count LRU | 200B needs **GB budget**, not layer count | **`--ram-budget-gb 10`** pins early layers; stricter byte LRU still TODO |
+| `max_layers_in_z` = layer count LRU | 200B needs **GB budget**, not layer count | **`--ram-budget-gb 10`** pins early layers; provider byte LRU is now shipped, with large-model qualification still open |
 | Compression Trinity = storage win | zlib layer bundles kill decode on 0.1B | Ship **`trinity_lut2` + shadow** or **`.decode_cache/`**, not zlib `trinity_layer` on fast SSD |
 | **CPU-only thesis framing** | Product is **GPU inference**; CPU path is dev + low-RAM research | M6 + GDS are **primary** tok/s track; CPU presets validate streaming correctness |
 | **Trinity tok/s = disk size** | Decode ~290 ms/layer dominates read ~0.5 ms on NVMe | — fuse / cache / promote |
@@ -181,9 +200,9 @@ See [`CHANGELOG.md`](../CHANGELOG.md) for full history.
 |----|------|--------|
 | P0.1–P0.4 | Warm cache default, batched TMix, zlib guard, tiered+partial default | **Done** |
 | P1.1–P1.3 | Batched GEMV, layer-span fused, FLUTE pack layout | **Done** |
-| P1.4 | Full native block forward on packed weights (M6 hook) | **Partial** — `packed_block_forward.py` on CPU |
+| P1.4 | Full native block forward on packed weights (M6 hook) | **Done for the supported CPU fused-pack path** — `packed_block_forward.py` covers grouped/LUT2 CPU blocks without bf16 matrix injection; DeepEmbed-v1/non-fused fallbacks and full-native CUDA remain separate |
 | P2.1 | **FLUTE-style CUDA kernel** for Trinity LUT2 | **Open** — M6b |
-| DNV-2/3/11 | Pipelined `.decode_cache/` writes, mmap steady, ship cache | **Open** — |
+| DNV-2/3/11 | Pipelined `.decode_cache/` writes, mmap steady, ship cache | **Done on CPU** — async writer/telemetry, per-file mmap reuse, and `build_decode_cache` distribution/verification tooling |
 
 ---
 
@@ -205,18 +224,30 @@ scaling, large 2.9B/7B measurements, and large-model or quantizer training.
 
 ---
 
-## Remaining work (current CPU scope, July 28, 2026)
+## Remaining work (current CPU scope, September 1, 2026)
 
-1. Extend the 2.9B grouped-U8 quality certificate to multiple prompts and
-   longer generations; the current throughput/ABI result is not a quality
-   promotion because its KL probe exceeded the configured gate.
+1. Review the supplemental six-prompt/32-position teacher-forced evidence and
+   extend the 2.9B grouped-U8 quality certificate beyond its current three
+   prompts and eight positions per prompt. The current certificate passes with
+   minimum top-10 overlap 0.90, maximum KL 0.0109365, and maximum state
+   relative L2 0.0341558; held-out, sustained, and free-running quality
+   qualification remains open.
 2. Continue profiling the native grouped-U8 GEMV, recurrent-state update, and
    vocabulary head so the compact CPU path improves without relaxing parity.
+   The current A/B work rejects packed vocabulary projection as the default
+   speed path and keeps the dense BLAS head unless the memory trade-off is
+   explicitly desired.
 3. Keep the full CPU conformance, native CTest, F-tier, and multiprocess HTTP
    checks in CI when their model/native assets are
    available.
 4. GPU, CUDA/GDS, Albatross, and physical multi-SSD scaling remain separate
    hardware-gated work and are outside the current CPU implementation scope.
+
+The packed native vocabulary-head projection is intentionally not part of the
+default speed profile: its memory benefit is real, but the measured 2.9B CPU
+projection was slower than dense BLAS. Intermediate recurrent-state snapshot
+elision is already the default for uninterrupted generation; callback,
+cancellation, and deadline-controlled requests retain the resumable snapshots.
 
 ---
 

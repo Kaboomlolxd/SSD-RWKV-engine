@@ -15,6 +15,7 @@ from rwkv_ssd.backends.rwkvcpp import RWKVCppBackend
 from rwkv_ssd.runtime.config import EngineConfig
 from rwkv_ssd.runtime.engine import InferenceEngine
 from rwkv_ssd.runtime.layer_keys import manifest_block_layers
+from rwkv_ssd.runtime.sampling import sample_numpy
 from rwkv_ssd.tools.quant_quality import compare_logits, compare_tensors
 
 
@@ -62,6 +63,7 @@ def evaluate_rwkvcpp_pack(
     pack_dir: Path,
     prompts: list[str],
     *,
+    generation_tokens: int = 0,
     top_k: int = 10,
     min_top_k_overlap: float = 0.8,
     max_kl: float = 0.05,
@@ -101,16 +103,16 @@ def evaluate_rwkvcpp_pack(
                     # engine-facing API as production; calling the raw GGML
                     # full-graph evaluator here would reject a valid
                     # shape-only packed graph as "not uploaded".
-                    candidate.generate_greedy_pack_streaming(
-                        prompt,
-                        0,
+                    candidate._load_layer_global_weights(provider, by_layer)
+                    candidate._layer_reset_state(None)
+                    cand_logits = candidate._layer_advance_sequence(
+                        [int(token_id) for token_id in ids],
                         provider,
                         by_layer,
                         layer_ids,
                         None,
                     )
-                    cand_logits = candidate._last_logits
-                    cand_state = candidate._state
+                    cand_state = candidate._layer_flat_state().copy()
                     if cand_logits is None or cand_state is None:
                         raise RuntimeError(
                             "rwkv.cpp layer-streaming quality probe produced no state/logits"
@@ -126,12 +128,74 @@ def evaluate_rwkvcpp_pack(
                 pairs.append(
                     (
                         prompt,
-                        torch.from_numpy(np.asarray(ref_logits)).float(),
-                        torch.from_numpy(np.asarray(cand_logits)).float(),
-                        torch.from_numpy(np.asarray(ref_state)).float(),
-                        torch.from_numpy(np.asarray(cand_state)).float(),
+                        torch.from_numpy(np.asarray(ref_logits).copy()).float(),
+                        torch.from_numpy(np.asarray(cand_logits).copy()).float(),
+                        torch.from_numpy(np.asarray(ref_state).copy()).float(),
+                        torch.from_numpy(np.asarray(cand_state).copy()).float(),
                     )
                 )
+
+                # Compare a fixed, reference-model token trajectory rather
+                # than allowing an early quantization mismatch to change all
+                # later inputs.  This is the strongest useful CPU pack gate:
+                # every row is evaluated at the same recurrent context, while
+                # both implementations still advance their own state.  The
+                # free-running greedy token stream is checked separately by
+                # the normal generation tests and is not hidden by this
+                # teacher-forced diagnostic.
+                if generation_tokens > 0:
+                    ref_current_state = np.asarray(ref_state, dtype=np.float32)
+                    ref_next_state = np.empty_like(ref_current_state)
+                    ref_current_logits = np.asarray(ref_logits, dtype=np.float32)
+                    cand_current_logits = np.asarray(cand_logits, dtype=np.float32)
+                    for step in range(int(generation_tokens)):
+                        ref_token = sample_numpy(
+                            ref_current_logits, temperature=1.0, greedy=True
+                        )
+                        pairs.append(
+                            (
+                                f"{prompt} [generation {step + 1}]",
+                                torch.from_numpy(ref_current_logits.copy()).float(),
+                                torch.from_numpy(cand_current_logits.copy()).float(),
+                                torch.from_numpy(ref_current_state.copy()).float(),
+                                torch.from_numpy(
+                                    np.asarray(
+                                        candidate._layer_flat_state()
+                                        if candidate._native_layer_streaming_active()
+                                        else candidate._state
+                                    ).copy()
+                                ).float(),
+                            )
+                        )
+                        ref_current_logits, ref_next_state = reference._model.eval(
+                            int(ref_token),
+                            ref_current_state,
+                            ref_next_state,
+                            ref_current_logits,
+                            use_numpy=True,
+                        )
+                        ref_current_state, ref_next_state = (
+                            ref_next_state,
+                            ref_current_state,
+                        )
+                        if candidate._native_layer_streaming_active():
+                            cand_current_logits = candidate._layer_advance_token(
+                                int(ref_token),
+                                provider,
+                                by_layer,
+                                layer_ids,
+                                None,
+                            )
+                        else:
+                            cand_next_state = np.empty_like(cand_state)
+                            cand_current_logits, cand_next_state = candidate._model.eval(
+                                int(ref_token),
+                                cand_state,
+                                cand_next_state,
+                                cand_current_logits,
+                                use_numpy=True,
+                            )
+                            cand_state, cand_next_state = cand_next_state, cand_state
     finally:
         reference.close()
     result = summarize_quality_pairs(
@@ -147,6 +211,7 @@ def evaluate_rwkvcpp_pack(
             "checkpoint": str(checkpoint),
             "candidate_pack": str(pack_dir),
             "resolved_candidate_pack": resolved_pack,
+            "generation_tokens": max(0, int(generation_tokens)),
             "native_upload_scope": "all_manifest_layers_including_embedding_and_head",
             "resident_native_tensors": (
                 "non-matrix/control tensors remain dense; grouped 2-D tensors "
@@ -162,6 +227,7 @@ def evaluate_rwkvcpp_checkpoint(
     candidate_checkpoint: Path,
     prompts: list[str],
     *,
+    generation_tokens: int = 0,
     top_k: int = 10,
     min_top_k_overlap: float = 0.8,
     max_kl: float = 0.05,
@@ -185,12 +251,54 @@ def evaluate_rwkvcpp_checkpoint(
             pairs.append(
                 (
                     prompt,
-                    torch.from_numpy(np.asarray(ref_logits)).float(),
-                    torch.from_numpy(np.asarray(cand_logits)).float(),
-                    torch.from_numpy(np.asarray(ref_state)).float(),
-                    torch.from_numpy(np.asarray(cand_state)).float(),
+                    torch.from_numpy(np.asarray(ref_logits).copy()).float(),
+                    torch.from_numpy(np.asarray(cand_logits).copy()).float(),
+                    torch.from_numpy(np.asarray(ref_state).copy()).float(),
+                    torch.from_numpy(np.asarray(cand_state).copy()).float(),
                 )
             )
+            if generation_tokens > 0:
+                ref_current_state = np.asarray(ref_state, dtype=np.float32)
+                cand_current_state = np.asarray(cand_state, dtype=np.float32)
+                ref_next_state = np.empty_like(ref_current_state)
+                cand_next_state = np.empty_like(cand_current_state)
+                ref_current_logits = np.asarray(ref_logits, dtype=np.float32)
+                cand_current_logits = np.asarray(cand_logits, dtype=np.float32)
+                for step in range(int(generation_tokens)):
+                    ref_token = sample_numpy(
+                        ref_current_logits, temperature=1.0, greedy=True
+                    )
+                    pairs.append(
+                        (
+                            f"{prompt} [generation {step + 1}]",
+                            torch.from_numpy(ref_current_logits.copy()).float(),
+                            torch.from_numpy(cand_current_logits.copy()).float(),
+                            torch.from_numpy(ref_current_state.copy()).float(),
+                            torch.from_numpy(cand_current_state.copy()).float(),
+                        )
+                    )
+                    ref_current_logits, ref_next_state = reference._model.eval(
+                        int(ref_token),
+                        ref_current_state,
+                        ref_next_state,
+                        ref_current_logits,
+                        use_numpy=True,
+                    )
+                    ref_current_state, ref_next_state = (
+                        ref_next_state,
+                        ref_current_state,
+                    )
+                    cand_current_logits, cand_next_state = candidate._model.eval(
+                        int(ref_token),
+                        cand_current_state,
+                        cand_next_state,
+                        cand_current_logits,
+                        use_numpy=True,
+                    )
+                    cand_current_state, cand_next_state = (
+                        cand_next_state,
+                        cand_current_state,
+                    )
     finally:
         reference.close()
         candidate.close()
@@ -206,6 +314,7 @@ def evaluate_rwkvcpp_checkpoint(
             "schema_version": 1,
             "checkpoint": str(reference_checkpoint),
             "candidate_checkpoint": str(candidate_checkpoint),
+            "generation_tokens": max(0, int(generation_tokens)),
         }
     )
     return result
@@ -218,6 +327,12 @@ def main() -> None:
     candidates.add_argument("--candidate-pack", type=Path)
     candidates.add_argument("--candidate-checkpoint", type=Path)
     parser.add_argument("--prompts", default="Hello,The future of storage is,Once upon a time")
+    parser.add_argument(
+        "--generation-tokens",
+        type=int,
+        default=0,
+        help="teacher-forced autoregressive quality rows per prompt (0 keeps prompt-only mode)",
+    )
     parser.add_argument("--top-k", type=int, default=10)
     parser.add_argument("--min-top-k-overlap", type=float, default=0.8)
     parser.add_argument("--max-kl", type=float, default=0.05)
@@ -230,6 +345,7 @@ def main() -> None:
         "min_top_k_overlap": args.min_top_k_overlap,
         "max_kl": args.max_kl,
         "max_state_relative_l2": args.max_state_relative_l2,
+        "generation_tokens": max(0, args.generation_tokens),
     }
     prompts = [item for item in args.prompts.split(",") if item]
     if args.candidate_checkpoint is not None:

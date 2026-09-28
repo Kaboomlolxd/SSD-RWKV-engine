@@ -41,7 +41,7 @@ relative 1–5 inputs. It ranks experiments, not roadmap commitments.
 | 6 | Deadline/QoS runtime routing | 4 | 3 | 3 | 4.0 | prototype, quality-gated | per-request policy hint | missed deadlines and quality under one cache budget |
 | 7 | Hierarchical state parking/DAG branching | 3 | 4 | 3 | 4.0 | **CPU prototype**; remote/GPU tiers open | state-tier policy | parity, bytes, restore p95 and recovery |
 | 8 | Native layer slots for rwkv.cpp | 5 | 3 | 4 | 3.8 | ABI prototype; build-gated | provider/native slot ABI | greedy parity and RSS vs resident converted graph |
-| 9 | Real weight-stationary multi-session batching | 5 | 3 | 4 | 3.8 | **CPU-tested ChatRWKV implementation**; rwkv.cpp open | backend batch/state API | parity, sweeps/session and tok/s |
+| 9 | Real weight-stationary multi-session batching | 5 | 3 | 4 | 3.8 | **CPU-tested ChatRWKV and rwkv.cpp implementations**; broader qualification open | backend batch/state API | parity, sweeps/session and tok/s |
 | 10 | Topology-aware sharding | 5 | 2 | 4 | 2.5 | placement prototype; hardware-gated | diagnostic/placement plan | capped two-tier emulation, then physical NUMA/PCIe/multi-SSD |
 | 11 | CUDA fused packed-block execution | 5 | 2 | 5 | 2.0 | open, Linux/NVIDIA-gated; LUT2 reserved | CUDA provider/kernel ABI | parity and kernel throughput vs decode→GEMM |
 | 12 | GPU read/decode/H2D/compute pipeline | 5 | 2 | 5 | 2.0 | staging foundation; hardware-gated | GPU swapper/provider events | median/p95 stages, VRAM/RSS, GDS vs pinned bounce |
@@ -196,8 +196,12 @@ pack. Public interface/schema changes wait until its experiment passes.
   multi-session capacity, not single-session latency. Eight shared decode
   sweeps loaded 12 layers each (96 loads). A three-token repeated run was
   prefill-dominated and slightly slower in batch mode; short-request gains are
-  therefore not claimed. rwkv.cpp shared sweeps still require its native
-  per-layer graph counterpart.
+  therefore not claimed. Native rwkv.cpp now has the same layer-outer/session-
+  inner schedule through its registered per-layer ABI. On the real 0.1B CPU
+  pack, two warm sessions generating four tokens each measured 2.67–3.27
+  aggregate tok/s versus 1.34–1.60 tok/s independently, with exact greedy
+  output parity. This is capacity evidence, not a single-session latency or
+  physical-SSD claim.
 
   Current benchmark observability has three known gaps: batch prefill time and
   `z_bytes` report zero, and batch layer rows include prefill while independent

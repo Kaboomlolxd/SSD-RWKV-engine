@@ -47,11 +47,35 @@ speedup without a separate end-to-end run.
 | Scope | Scripts |
 |---|---|
 | Backend comparison | `bench_backend_compare.py`, `bench_rwkvcpp_quality.py` |
-| Weight scheduling | `bench_weight_stationary.py`, `bench_chatrwkv_weight_stationary.py` |
+| Weight scheduling | `bench_weight_stationary.py`, `bench_chatrwkv_weight_stationary.py`, `bench_rwkvcpp_weight_stationary.py` |
 | Codec quality/size | `bench_compression_ab.py`, `bench_lut_bitwidth_research.py` |
 | Storage/layout | `bench_shard_simulation.py`, `bench_streaming_matrix.py` |
 | Context/state | `bench_context_frontier.py`, `bench_state_parking.py` |
 | Shadow/cache behavior | `bench_shadow_sel_quick.py`, `bench_io_ceiling.py` |
+| CPU optimization A/B probes | `bench_cpu_optimizations.py` (grouped decode, DeepEmbed sidecar/batch paths, state publication, whole-pack zstd); `bench_rwkvcpp_weight_stationary.py` (native shared prefill/decode) |
+
+The CPU optimization probe uses a real uncompressed pack for the storage A/B
+and creates disposable synthetic fixtures for the other mechanisms:
+
+```powershell
+python bench/bench_cpu_optimizations.py `
+  --pack C:\prepared\runtime_pack_2.9b_grouped_quality `
+  --repeats 3
+```
+
+The latest local run measured 5.05× grouped-U8 decode, 4.63× grouped-LUT2
+decode, approximately 19×–1,202× DeepEmbed sidecar lookup improvement across
+access patterns, 1.17× two-session DeepEmbed batch wall time with 50% fewer
+layer loads, and 2,842.2 ms raw-mmap versus 8,898.5 ms zstd load-plus-read on
+the 2.9B pack. These focused numbers are mechanism evidence, not an additive
+end-to-end tok/s claim; the zstd result is why raw mmap remains the hot-path
+default.
+
+For native rwkv.cpp batch capacity, use `bench_rwkvcpp_weight_stationary.py`.
+The latest three-sample 0.1B run matched independent output and measured
+2.67 aggregate tok/s for two shared sessions versus 1.34 tok/s independently,
+about 2.00× wall-time speedup. It covers native layer-outer/session-inner
+prefill and decode on normal files with a warm page cache.
 
 ## Exploratory benches
 

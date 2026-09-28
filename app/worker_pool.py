@@ -251,6 +251,12 @@ def _worker_process_main(
     engine: InferenceEngine | None = None
     backend_kind, pack_fp, tokenizer_fp = _worker_identity(config)
     cancel_events: dict[str, threading.Event] = {}
+    # ``cancel`` travels on a separate IPC queue from ``generate``.  A
+    # caller can therefore cancel immediately after submit, before the
+    # request loop has installed its per-request Event.  Keep that edge
+    # notification until the request is registered instead of losing the
+    # cancellation and leaving a long generation running.
+    pending_cancels: set[str] = set()
     cancel_lock = threading.Lock()
     stop_control = threading.Event()
 
@@ -268,11 +274,14 @@ def _worker_process_main(
                 with cancel_lock:
                     for event in cancel_events.values():
                         event.set()
+                    pending_cancels.clear()
                 return
             if kind == "cancel":
                 request_id = str(message.get("request_id", ""))
                 with cancel_lock:
                     event = cancel_events.get(request_id)
+                    if event is None and request_id:
+                        pending_cancels.add(request_id)
                 if event is not None:
                     event.set()
                 # A cancellation request is an IPC operation in its own
@@ -284,7 +293,10 @@ def _worker_process_main(
                     {
                         "kind": "cancel_ack",
                         "request_id": request_id,
-                        "accepted": event is not None,
+                        # The request may not have reached the request loop
+                        # yet.  A queued cancellation is accepted just as a
+                        # cancellation of an already-running request is.
+                        "accepted": bool(event is not None or request_id),
                     }
                 )
 
@@ -335,6 +347,9 @@ def _worker_process_main(
             cancel_event = threading.Event()
             with cancel_lock:
                 cancel_events[request_id] = cancel_event
+                if request_id in pending_cancels:
+                    pending_cancels.remove(request_id)
+                    cancel_event.set()
             old_max = engine.config.max_tokens
             old_temp = engine.config.temperature
             old_greedy = engine.config.greedy

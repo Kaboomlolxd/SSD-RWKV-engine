@@ -10,6 +10,7 @@ from rwkv_ssd.runtime.page_residency import (
 )
 from rwkv_ssd.runtime.weight_provider import ManifestWeightProvider
 from rwkv_ssd.runtime.weight_store import open_weight_store
+from rwkv_ssd.runtime.io_threaded import ThreadedWeightStore
 
 
 def _entry() -> TensorEntry:
@@ -85,5 +86,19 @@ def test_factory_enables_observed_residency_with_env(monkeypatch, tmp_path) -> N
     store = open_weight_store(path, backend="pread")
     try:
         assert isinstance(store, ObservedResidencyWeightStore)
+    finally:
+        store.close()
+
+
+def test_threaded_store_delegates_residency_estimate(tmp_path) -> None:
+    path = tmp_path / "weights.bin"
+    path.write_bytes(bytes(range(32)))
+    observed = ObservedResidencyWeightStore(open_weight_store(path, backend="pread"))
+    store = ThreadedWeightStore(observed, workers=1)
+    entry = _entry()
+    try:
+        assert not store.probably_resident([entry])
+        assert store.read_bytes(entry) == bytes(range(4, 12))
+        assert store.probably_resident([entry])
     finally:
         store.close()

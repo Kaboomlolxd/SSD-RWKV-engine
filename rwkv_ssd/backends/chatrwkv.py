@@ -465,39 +465,41 @@ class ChatRWKVBackend(RecurrentBackend):
             if control is not None:
                 control.check()
             prefill_started = time.perf_counter()
-            if ids:
-                _, state = model.forward_streaming(
-                    ids,
-                    state,
-                    provider,
-                    stream_layers,
-                )
+            # Prefill already produces the distribution for the first
+            # generated token.  Keep it instead of replaying the final prompt
+            # token in the decode loop; replaying advances qkv/DEA state twice
+            # and makes the reference path disagree with resident inference.
+            prefill_ids = ids or [0]
+            logits, state = model.forward_streaming(
+                prefill_ids,
+                state,
+                provider,
+                stream_layers,
+            )
             if metrics is not None:
                 metrics.prefill_wall_s = time.perf_counter() - prefill_started
             output: list[int] = []
             decode_started = time.perf_counter()
-            context_last = int(ids[-1]) if ids else 0
-            last_logits = None
+            context_last = int(prefill_ids[-1])
             for _ in range(max(0, int(max_tokens))):
                 if control is not None:
                     control.check()
-                logits, state = model.forward_streaming(
-                    [context_last],
-                    state,
-                    provider,
-                    stream_layers,
-                )
-                last_logits = logits
                 next_id = sample_torch(
                     logits,
                     temperature=temperature,
                     greedy=greedy,
                 )
                 output.append(next_id)
-                _remember_rwkv7_state(model, state, context_last, logits)
                 if control is not None:
+                    _remember_rwkv7_state(model, state, context_last, logits)
                     control.emit(next_id)
                 context_last = int(next_id)
+                logits, state = model.forward_streaming(
+                    [context_last],
+                    state,
+                    provider,
+                    stream_layers,
+                )
                 if metrics is not None:
                     metrics.tokens_generated = len(output)
             if metrics is not None:
@@ -507,7 +509,7 @@ class ChatRWKVBackend(RecurrentBackend):
                     if output
                     else []
                 )
-            _remember_rwkv7_state(model, state, context_last, last_logits)
+            _remember_rwkv7_state(model, state, context_last, logits)
             return output
         from rwkv_ssd.backends.rwkv7_forward import greedy_token_ids_streaming
 
@@ -532,7 +534,7 @@ class ChatRWKVBackend(RecurrentBackend):
         )
 
     def generate_greedy_batch_streaming(self, prompts, max_tokens, provider, by_layer, layer_ids, metrics):
-        """Independent prefill followed by genuine shared-layer dense decode.
+        """Shared-layer qkv/DEA prefill and dense decode, or ordinary RWKV batch decode.
 
         The final prefill forward already produces the distribution for the
         first generated token.  Replaying the prompt's final token here would
@@ -544,7 +546,61 @@ class ChatRWKVBackend(RecurrentBackend):
             raise RuntimeError("RWKV-7 ChatRWKV backend not loaded")
         from rwkv_ssd.backends.rwkv7_batch import forward_batch_one_dense
         from rwkv_ssd.backends.rwkv7_forward import forward_one, prefill_text_streaming
-        states, last_ids = [], []
+        if self._deepembed_streaming_reference:
+            from rwkv_ssd.runtime.deepembed import is_deepembed_tensor_name
+
+            # qkv/DEA uses a context-indexed sidecar and therefore cannot use
+            # the ordinary ChatRWKV sequence prefill helper.  Its reference
+            # model nevertheless supports a useful shared-layer path: load
+            # each ordinary layer once, then advance every independent
+            # context through that layer.
+            stream_layers = {
+                layer_id: [
+                    entry
+                    for entry in entries
+                    if not is_deepembed_tensor_name(str(getattr(entry, "name", "")))
+                ]
+                for layer_id, entries in by_layer.items()
+            }
+            model = self._model
+            states = []
+            prompt_sequences = []
+            for prompt in prompts:
+                ids = self._pipeline.encode(prompt)
+                state = model.generate_zero_state()
+                prompt_sequences.append(ids or [0])
+                states.append(state)
+
+            # qkv/DEA lookup rows are context-dependent, so the reference
+            # implementation keeps each session's exact sequence/mask while
+            # sharing the ordinary layer transaction across all prompts.
+            prefill_logits, states = model.forward_batch_prefill_streaming(
+                prompt_sequences,
+                states,
+                provider,
+                stream_layers,
+                metrics=metrics,
+            )
+            outputs = [[] for _ in prompts]
+            count = max(0, int(max_tokens))
+            for _ in range(count):
+                # The prefill sweep (and each preceding decode sweep) already
+                # produced the next-token distribution.  Sampling it directly
+                # avoids consuming every prompt's final token twice.
+                generated = [int(value.argmax().item()) for value in prefill_logits]
+                for output, token in zip(outputs, generated, strict=True):
+                    output.append(token)
+                if len(outputs[0]) < count:
+                    prefill_logits, states = model.forward_batch_streaming(
+                        generated,
+                        states,
+                        provider,
+                        stream_layers,
+                        metrics=metrics,
+                    )
+            metrics.tokens_generated = len(prompts) * count
+            return outputs
+        states = []
         prefill_logits = []
         for prompt in prompts:
             state = self._model.generate_zero_state()
@@ -569,7 +625,6 @@ class ChatRWKVBackend(RecurrentBackend):
                     metrics=metrics,
                 )
             states.append(state)
-            last_ids.append(last)
             prefill_logits.append(logits)
         outputs = [[] for _ in prompts]
         count = max(0, int(max_tokens))

@@ -1,6 +1,7 @@
 """Pack and verify tests (M0/M2)."""
 
 from pathlib import Path
+import hashlib
 import json
 
 import pytest
@@ -30,6 +31,9 @@ def test_pack_roundtrip(tmp_path: Path) -> None:
     m = Manifest.load(out)
     assert len(m.tensors) == 1
     assert m.meta.get("weights_sha256")
+    assert m.meta["checkpoint_sha256"] == hashlib.sha256(
+        ckpt.read_bytes()
+    ).hexdigest()
 
 
 def test_trinity_default_uses_native_safe_mixed_precision(tmp_path: Path) -> None:

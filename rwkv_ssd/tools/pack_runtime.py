@@ -17,6 +17,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 
 import torch
@@ -57,6 +58,144 @@ def _compute_pack_composition(pack_dir: Path) -> dict:
     "why is my pack 600 MB" question has a one-line answer.
     """
     return pack_full_stats(pack_dir)
+
+
+def _require_zstd():
+    """Import the optional zstandard dependency with an actionable error."""
+    try:
+        import zstandard as zstd
+    except ImportError as exc:
+        raise ImportError(
+            "zstandard compression requires the optional dependency; install "
+            "with `pip install 'rwkv-ssd[zstd]'`"
+        ) from exc
+    return zstd
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        while True:
+            block = source.read(8 * 1024 * 1024)
+            if not block:
+                break
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _sha256_source(path: Path) -> str:
+    """Hash a checkpoint file or a deterministic HF/sharded input directory."""
+    if path.is_file():
+        return _sha256_file(path)
+    if not path.is_dir():
+        raise FileNotFoundError(path)
+    files = sorted(item for item in path.rglob("*") if item.is_file())
+    if not files:
+        raise FileNotFoundError(f"checkpoint directory is empty: {path}")
+    digest = hashlib.sha256()
+    root = path.resolve()
+    for item in files:
+        digest.update(item.relative_to(root).as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        with item.open("rb") as source:
+            while True:
+                block = source.read(8 * 1024 * 1024)
+                if not block:
+                    break
+                digest.update(block)
+    return digest.hexdigest()
+
+
+def _finalize_weight_compression(
+    output_dir: Path, compression: str, *, quiet: bool = False
+) -> None:
+    """Replace the logical pack with an optional cold-storage zstd frame.
+
+    Tensor offsets stay relative to the decompressed image.  The manifest
+    records both sizes, while ``weights_sha256`` continues to protect the
+    physical file that is actually distributed.
+    """
+    codec = compression.strip().lower()
+    if codec in ("", "none", "off"):
+        return
+    if codec != "zstd":
+        raise ValueError("compression must be 'none' or 'zstd'")
+
+    zstd = _require_zstd()
+    raw_path = output_dir / "weights.bin"
+    if not raw_path.is_file():
+        raise FileNotFoundError(f"cannot compress missing pack: {raw_path}")
+    logical_size = raw_path.stat().st_size
+    compressed_path = output_dir / "weights.bin.zst"
+    temp_path = compressed_path.with_suffix(compressed_path.suffix + ".tmp")
+    compressor = zstd.ZstdCompressor(level=3).compressobj(logical_size)
+    # Stream through a size-aware frame so the runtime can preallocate one
+    # logical buffer. This keeps pack creation bounded by the checkpoint reader
+    # instead of loading a second full uncompressed image into Python memory.
+    with raw_path.open("rb") as source, temp_path.open("wb") as target:
+        while True:
+            block = source.read(8 * 1024 * 1024)
+            if not block:
+                break
+            encoded = compressor.compress(block)
+            if encoded:
+                target.write(encoded)
+        tail = compressor.flush()
+        if tail:
+            target.write(tail)
+    os.replace(temp_path, compressed_path)
+    compressed_size = compressed_path.stat().st_size
+    raw_path.unlink()
+
+    manifest_path = output_dir / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise ValueError("manifest.json must contain an object")
+    meta = manifest.setdefault("meta", {})
+    if not isinstance(meta, dict):
+        raise ValueError("manifest.json 'meta' must be an object")
+    manifest["weights_file"] = "weights.bin.zst"
+    meta["weights_compression"] = "zstd"
+    meta["weights_uncompressed_bytes"] = logical_size
+    meta["weights_compressed_bytes"] = compressed_size
+    # ``total_bytes`` historically meant the backing file size.  Keep that
+    # meaning and expose the logical size explicitly for offset validation.
+    meta["total_bytes"] = compressed_size
+    if meta.get("weights_sha256"):
+        meta["weights_sha256"] = _sha256_file(compressed_path)
+    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
+    # Keep the optional sidecar honest when it exists.  Its manifest metadata
+    # remains authoritative, but operators commonly inspect meta.json alone.
+    sidecar_path = output_dir / "meta.json"
+    if sidecar_path.is_file():
+        sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+        if isinstance(sidecar, dict):
+            sidecar["weights_compression"] = "zstd"
+            sidecar["weights_uncompressed_bytes"] = logical_size
+            sidecar["weights_compressed_bytes"] = compressed_size
+            composition = sidecar.get("pack_composition")
+            if isinstance(composition, dict):
+                delta_mb = (compressed_size - logical_size) / (1024 * 1024)
+                composition["weights_bin_mb"] = round(
+                    compressed_size / (1024 * 1024), 2
+                )
+                composition["weights_mb"] = round(
+                    compressed_size / (1024 * 1024), 2
+                )
+                if isinstance(composition.get("total_mb"), (int, float)):
+                    composition["total_mb"] = round(
+                        float(composition["total_mb"]) + delta_mb, 2
+                    )
+            sidecar_path.write_text(json.dumps(sidecar, indent=2), encoding="utf-8")
+
+    if not quiet:
+        ratio = logical_size / compressed_size if compressed_size else 0.0
+        print(
+            f"Compressed weights.bin -> weights.bin.zst: "
+            f"{logical_size / (1024**2):.2f} -> "
+            f"{compressed_size / (1024**2):.2f} MiB ({ratio:.2f}x)"
+        )
 
 
 from rwkv_ssd.runtime.checkpoint_meta import (
@@ -203,6 +342,8 @@ def _pack_trinity_layer_grouped(
     bf16_shadow: bool = False,
     shadow_min_numel: int = 0,
     hf_meta_info: dict | None = None,
+    compression: str = "none",
+    checkpoint_sha256: str | None = None,
 ) -> None:
     """``trinity`` + layer_grouped: one layer blob per block (zlib or raw TCL)."""
     weights_path = output_dir / "weights.bin"
@@ -288,10 +429,13 @@ def _pack_trinity_layer_grouped(
         hash_weights,
         input_path=input_path,
         meta_extra=meta_extra,
+        checkpoint_sha256=checkpoint_sha256,
     )
+    _finalize_weight_compression(output_dir, compression, quiet=quiet)
     if not quiet:
-        print(f"Packed {len(tensors_meta)} tensors (trinity_layer) -> {weights_path}")
-        print(f"Total size: {weights_path.stat().st_size / (1024**2):.2f} MiB")
+        final_path = output_dir / ("weights.bin.zst" if compression == "zstd" else "weights.bin")
+        print(f"Packed {len(tensors_meta)} tensors (trinity_layer) -> {final_path}")
+        print(f"Total size: {final_path.stat().st_size / (1024**2):.2f} MiB")
 
 
 def _write_manifest(
@@ -307,6 +451,7 @@ def _write_manifest(
     hash_weights: bool,
     input_path: Path | None = None,
     meta_extra: dict | None = None,
+    checkpoint_sha256: str | None = None,
 ) -> None:
     meta_codec = {
         "pack_codec": pack_codec,
@@ -344,6 +489,8 @@ def _write_manifest(
             manifest["meta"]["hf_architectures"] = architectures
     if input_path is not None:
         manifest["meta"]["source_checkpoint"] = _source_checkpoint_label(input_path)
+        if checkpoint_sha256:
+            manifest["meta"]["checkpoint_sha256"] = checkpoint_sha256
     (output_dir / "manifest.json").write_text(
         json.dumps(manifest, indent=2), encoding="utf-8"
     )
@@ -355,6 +502,8 @@ def _write_manifest(
             meta["hf_architectures"] = architectures
     if input_path is not None:
         meta["source_checkpoint"] = _source_checkpoint_label(input_path)
+        if checkpoint_sha256:
+            meta["checkpoint_sha256"] = checkpoint_sha256
     if hf_repo:
         meta["hf_repo_id"] = hf_repo
     meta["pack_composition"] = _compute_pack_composition(output_dir)
@@ -461,10 +610,16 @@ def pack(
     copy_hf_metadata: bool = False,
     hf_metadata_overwrite: bool = False,
     write_deepembed: bool = True,
+    compression: str = "none",
 ) -> None:
     if codec_map is None:
         codec_map = {}
     codec = pack_codec.strip().lower()
+    compression = compression.strip().lower()
+    if compression not in ("none", "zstd"):
+        raise ValueError("compression must be 'none' or 'zstd'")
+    if compression == "zstd":
+        _require_zstd()
     quality_preset = trinity_quality_preset.strip().lower()
     if quality_preset not in ("native_safe", "legacy", "balanced"):
         raise ValueError(
@@ -487,6 +642,10 @@ def pack(
     if sector_bytes < 0:
         raise ValueError("sector_bytes must be >= 0")
 
+    # Compute provenance before writing anything. This matters when an
+    # operator places the output pack under an HF input directory: generated
+    # pack artifacts must not become part of the source checkpoint identity.
+    checkpoint_sha256 = _sha256_source(input_path) if hash_weights else None
     output_dir.mkdir(parents=True, exist_ok=True)
     state = _load_state_dict(input_path)
     deepembed_info: dict[str, object] = {}
@@ -569,6 +728,8 @@ def pack(
             bf16_shadow=bf16_shadow,
             shadow_min_numel=shadow_min_numel,
             hf_meta_info=hf_meta_info or None,
+            compression=compression,
+            checkpoint_sha256=checkpoint_sha256,
         )
         return
 
@@ -703,6 +864,8 @@ def pack(
         manifest["meta"]["hf_repo_id"] = hf_repo
     if weights_sha256:
         manifest["meta"]["weights_sha256"] = weights_sha256
+    if checkpoint_sha256:
+        manifest["meta"]["checkpoint_sha256"] = checkpoint_sha256
     if hf_meta_info:
         manifest["meta"]["hf_metadata"] = hf_meta_info
 
@@ -715,6 +878,8 @@ def pack(
         "model_family": model_family,
         **ckpt_meta,
     }
+    if checkpoint_sha256:
+        meta["checkpoint_sha256"] = checkpoint_sha256
     manifest["meta"].update(ckpt_meta)
     if hf_repo:
         meta["hf_repo_id"] = hf_repo
@@ -724,9 +889,11 @@ def pack(
         json.dumps(manifest, indent=2), encoding="utf-8"
     )
     (output_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    _finalize_weight_compression(output_dir, compression, quiet=quiet)
     if not quiet:
-        print(f"Packed {len(tensors_meta)} tensors -> {weights_path}")
-        print(f"Total size: {weights_path.stat().st_size / (1024**2):.2f} MiB")
+        final_path = output_dir / ("weights.bin.zst" if compression == "zstd" else "weights.bin")
+        print(f"Packed {len(tensors_meta)} tensors -> {final_path}")
+        print(f"Total size: {final_path.stat().st_size / (1024**2):.2f} MiB")
 
 
 def main() -> None:
@@ -762,6 +929,7 @@ def main() -> None:
             "groupwise_input_residual",
             "groupwise_kmeans_activation",
             "groupwise_residual_activation",
+            "hadamard_kmeans",
         ],
         help="Codebook algo for trinity_lut2/trinity. kmeans is +20dB SNR vs "
         "linspace on real RWKV weights; linspace is the legacy back-compat "
@@ -799,6 +967,12 @@ def main() -> None:
         default="default",
         choices=["default", "layer_grouped"],
         help="tensor order in weights.bin (layer_grouped = P2.b channel-friendly)",
+    )
+    p.add_argument(
+        "--compress",
+        choices=["none", "zstd"],
+        default="none",
+        help="optional cold-storage compression; zstd decompresses once into RAM at load",
     )
     p.add_argument(
         "--sector-bytes",
@@ -916,6 +1090,7 @@ def main() -> None:
         copy_hf_metadata=args.copy_hf_metadata,
         hf_metadata_overwrite=args.hf_metadata_overwrite,
         write_deepembed=not args.no_deepembed_sidecar,
+        compression=args.compress,
     )
 
 

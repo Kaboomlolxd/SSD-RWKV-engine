@@ -22,10 +22,11 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v5
         with:
-          # The native rwkv.cpp tree is an optional gitlink in this checkout.
-          # When its source/fixtures are available, the later steps build and
-          # qualify it; otherwise the CPU CI remains fully synthetic.
-          submodules: recursive
+          # The native rwkv.cpp tree and real-model fixtures are optional
+          # gitlinks. Keep CPU CI reproducible even when their pinned commits
+          # are only available in a local operator checkout; later steps build
+          # and qualify the native path when the sources are present.
+          submodules: false
 
       - name: Set up Python
         uses: actions/setup-python@v6

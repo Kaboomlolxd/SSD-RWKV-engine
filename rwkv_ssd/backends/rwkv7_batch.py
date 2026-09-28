@@ -29,8 +29,19 @@ def forward_batch_one_dense(model: Any, token_ids: list[int], states: list[list[
             resident = layer_weights_in_z(z, lid)
             row = None
             if entries and not resident:
+                # ManifestWeightProvider.begin_layer() normally creates this
+                # timing row inside load_layer_tensors_materialized().  Keep
+                # the batch path correct for lightweight/custom providers that
+                # implement the materialized contract without doing so, and do
+                # not use metrics.layers[-1] (which may belong to another
+                # layer or may not exist yet).
+                layer_count = len(metrics.layers)
                 tensors = provider.load_layer_tensors_materialized(entries)
-                row = metrics.layers[-1]
+                row = (
+                    metrics.layers[-1]
+                    if len(metrics.layers) > layer_count
+                    else metrics.start_layer(lid)
+                )
                 prepared = provider.prepare_layer_for_z(lid, tensors, row, force_materialize=True)
                 inject_layer_into_z(z, prepared)
                 for key in prepared:

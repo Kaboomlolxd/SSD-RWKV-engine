@@ -1,0 +1,14 @@
+# Copy this file to rwkv-ssd.yaml and edit the paths for your machine.
+# Relative paths are resolved from this YAML file.
+pack_dir: ../models/my-model.pack
+checkpoint_path: ../models/my-model.pth
+
+# Choose explicitly. rwkvcpp is the faster native CPU path when a matching
+# GGML model and native library are installed. ChatRWKV is the reference path.
+backend: rwkvcpp
+mode: streaming
+device: cpu
+max_tokens: 128
+temperature: 0.8
+top_p: 1.0
+greedy: false

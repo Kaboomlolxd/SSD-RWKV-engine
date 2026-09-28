@@ -233,16 +233,33 @@ class DeepEmbedSidecar:
         except Exception:
             pass
 
+    @staticmethod
+    def _tensor_from_raw(
+        raw: bytes | bytearray | memoryview,
+        dtype: torch.dtype,
+        shape: tuple[int, ...],
+    ) -> torch.Tensor:
+        """Decode one already-bounded sidecar byte range.
+
+        ``torch.frombuffer`` does not accept every dtype consistently across
+        the supported PyTorch versions.  Keep the BF16 representation explicit
+        just as :meth:`tensor` does, while allowing ``lookup`` to copy only the
+        requested rows instead of materializing a whole vocabulary table.
+        """
+        if dtype is torch.bfloat16:
+            tensor = torch.frombuffer(bytearray(raw), dtype=torch.uint16).view(
+                torch.bfloat16
+            )
+        else:
+            tensor = torch.frombuffer(bytearray(raw), dtype=dtype)
+        return tensor.reshape(shape)
+
     def tensor(self, key: str, *, device: torch.device | str | None = None) -> torch.Tensor:
         entry = self.entries.get(key)
         if entry is None:
             raise KeyError(f"DeepEmbed tensor {key!r} is not present in {self.path}")
         raw = self._mmap[entry.offset : entry.offset + entry.nbytes]
-        if entry.dtype is torch.bfloat16:
-            tensor = torch.frombuffer(bytearray(raw), dtype=torch.uint16).view(torch.bfloat16)
-        else:
-            tensor = torch.frombuffer(bytearray(raw), dtype=entry.dtype)
-        tensor = tensor.reshape(entry.shape).clone()
+        tensor = self._tensor_from_raw(raw, entry.dtype, entry.shape).clone()
         return tensor.to(device=device) if device is not None else tensor
 
     def lookup(
@@ -254,11 +271,61 @@ class DeepEmbedSidecar:
         device: torch.device | str | None = None,
     ) -> torch.Tensor:
         """Return rows for ``kind.layer_id`` in the original token order."""
-        full = self.tensor(_lookup_key(kind, layer_id))
-        ids = token_ids if isinstance(token_ids, torch.Tensor) else torch.tensor(list(token_ids))
-        ids = ids.to(dtype=torch.long, device=full.device)
-        result = full.index_select(0, ids)
-        return result.to(device=device) if device is not None else result
+        entry = self.entries.get(_lookup_key(kind, layer_id))
+        if entry is None:
+            raise KeyError(
+                f"DeepEmbed tensor {_lookup_key(kind, layer_id)!r} is not present "
+                f"in {self.path}"
+            )
+        ids = (
+            token_ids
+            if isinstance(token_ids, torch.Tensor)
+            else torch.tensor(list(token_ids), dtype=torch.long)
+        )
+        ids = ids.to(dtype=torch.long, device="cpu")
+        if ids.ndim != 1:
+            raise ValueError("DeepEmbed lookup token_ids must be one-dimensional")
+
+        rows = int(entry.shape[0]) if entry.shape else 0
+        if ids.numel():
+            low = int(ids.min().item())
+            high = int(ids.max().item())
+            if low < 0 or high >= rows:
+                raise IndexError(
+                    f"DeepEmbed lookup index out of range for {_lookup_key(kind, layer_id)!r}: "
+                    f"valid range is [0, {rows})"
+                )
+        tail_shape = tuple(entry.shape[1:])
+        result = torch.empty((int(ids.numel()), *tail_shape), dtype=entry.dtype)
+        if ids.numel() and rows:
+            row_bytes = entry.nbytes // rows
+            id_values = [int(value) for value in ids.tolist()]
+            position = 0
+            # Coalesce consecutive token IDs.  A prompt often contains runs of
+            # adjacent IDs, and one mmap slice/copy is materially cheaper than
+            # opening a separate Python byte range for each row.  The output
+            # remains in the caller's original token order.
+            while position < len(id_values):
+                first_id = id_values[position]
+                end_position = position + 1
+                while (
+                    end_position < len(id_values)
+                    and id_values[end_position] == first_id + end_position - position
+                ):
+                    end_position += 1
+                count = end_position - position
+                start = entry.offset + first_id * row_bytes
+                stop = start + count * row_bytes
+                chunk = self._tensor_from_raw(
+                    self._mmap[start:stop],
+                    entry.dtype,
+                    (count, *tail_shape),
+                )
+                result[position:end_position].copy_(chunk)
+                position = end_position
+        if device is not None:
+            result = result.to(device=device)
+        return result
 
 
 def _layer_norm_embedding(state: Mapping[str, torch.Tensor]) -> torch.Tensor:
@@ -413,6 +480,12 @@ class DeepEmbedReferenceModel:
         self._q_dim = self._output_dim(state["blocks.0.qkv.qq.weight"].detach().cpu().squeeze(), self.n_embd)
         self._rwkv_ssd_last_state = None
         self._rwkv_ssd_last_token_id = 0
+        # Layer entries are stable for the lifetime of a streamed model, but
+        # the public forward methods are called once per token. Cache the
+        # already-filtered ordinary block entries so each decode step does not
+        # rebuild the same list and repeatedly stringify manifest names.
+        self._stream_entries_source_id: int | None = None
+        self._stream_entries_cache: dict[int, list[Any]] = {}
 
     @classmethod
     def from_checkpoint(cls, checkpoint: str | Path, sidecar_path: str | Path | None = None) -> "DeepEmbedReferenceModel":
@@ -465,8 +538,48 @@ class DeepEmbedReferenceModel:
             return int(weight.numel())
         return int(weight.shape[1] if weight.shape[0] == input_dim else weight.shape[0])
 
+    def _install_stream_layer(
+        self, tensors: Mapping[str, torch.Tensor]
+    ) -> dict[str, torch.Tensor]:
+        """Install a streamed layer without copying the resident dictionary."""
+        overwritten = {key: self.z[key] for key in tensors if key in self.z}
+        self.z.update(tensors)
+        return overwritten
+
+    def _restore_stream_layer(
+        self,
+        tensors: Mapping[str, torch.Tensor],
+        overwritten: Mapping[str, torch.Tensor],
+    ) -> None:
+        for key in tensors:
+            if key in overwritten:
+                self.z[key] = overwritten[key]
+            else:
+                self.z.pop(key, None)
+
+    def _stream_entries_for_layer(
+        self,
+        layer_entries: Mapping[int, list[Any]],
+        layer_id: int,
+    ) -> list[Any]:
+        """Return the cached ordinary tensors for one streamed layer."""
+        source_id = id(layer_entries)
+        if source_id != self._stream_entries_source_id:
+            self._stream_entries_source_id = source_id
+            self._stream_entries_cache = {}
+        cached = self._stream_entries_cache.get(layer_id)
+        if cached is None:
+            cached = [
+                entry
+                for entry in layer_entries.get(layer_id, [])
+                if not is_deepembed_tensor_name(str(getattr(entry, "name", "")))
+            ]
+            self._stream_entries_cache[layer_id] = cached
+        return cached
+
     def _dea(self, layer_id: int, x: torch.Tensor, state: list[torch.Tensor], ctx: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         qkv = f"blocks.{layer_id}.qkv."
+        rows = int(x.shape[0])
         q = self._matmul(x, self.z[qkv + "qq.weight"], self.n_embd)
         k_proj = self._matmul(x, self.z[qkv + "k1"], self.n_embd)
         v_proj = self._matmul(x, self.z[qkv + "v1"], self.n_embd)
@@ -480,7 +593,10 @@ class DeepEmbedReferenceModel:
         x_k = self.z[qkv + "x_k"]
         x_v = self.z[qkv + "x_v"]
         q_prev_row = q_prev.unsqueeze(0)
-        q = q + (torch.cat((q_prev_row, q[:-1]), dim=0) - q) * x_q
+        if rows == 1:
+            q = q + (q_prev_row - q) * x_q
+        else:
+            q = q + (torch.cat((q_prev_row, q[:-1]), dim=0) - q) * x_q
         if k.shape[0] > 1:
             k = k + (F.pad(k, (0, 0, 1, -1)) - k) * x_k
             v = v + (F.pad(v, (0, 0, 1, -1)) - v) * x_v
@@ -488,9 +604,16 @@ class DeepEmbedReferenceModel:
         k = F.layer_norm(k, (k.shape[-1],), weight=self.z[qkv + "lnk.weight"], bias=self.z[qkv + "lnk.bias"])
         v = F.layer_norm(v, (v.shape[-1],), weight=self.z[qkv + "lnv.weight"], bias=self.z[qkv + "lnv.bias"])
         scores = 64.0 * torch.tanh((q @ k.transpose(-1, -2)) / 1024.0)
-        rows = x.shape[0]
-        mask = ~torch.tril(torch.ones((ctx.numel(), ctx.numel()), dtype=torch.bool))[-rows:, :]
-        qkv_out = scores.masked_fill(mask, float("-inf")).softmax(dim=-1) @ v
+        if rows == 1:
+            # A single decode query is always the final context position, so
+            # every key is causal. Avoid allocating arange/mask tensors on
+            # every layer/token; prompt prefill keeps the masked path below.
+            qkv_out = scores.softmax(dim=-1) @ v
+        else:
+            query_positions = torch.arange(ctx.numel() - rows, ctx.numel())
+            key_positions = torch.arange(ctx.numel())
+            mask = key_positions.unsqueeze(0) > query_positions.unsqueeze(1)
+            qkv_out = scores.masked_fill(mask, float("-inf")).softmax(dim=-1) @ v
         state[base] = k_c.detach()
         state[base + 1] = v_c.detach()
         state[self.n_layer * 3 + 1 + 2 * self.n_layer + layer_id] = q[-1].detach()
@@ -505,7 +628,10 @@ class DeepEmbedReferenceModel:
         v_first: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         b = f"blocks.{layer_id}.att."
-        xx = torch.cat((x_prev.unsqueeze(0), x[:-1]), dim=0) - x
+        if x.shape[0] == 1:
+            xx = x_prev.unsqueeze(0) - x
+        else:
+            xx = torch.cat((x_prev.unsqueeze(0), x[:-1]), dim=0) - x
         xr, xw, xk, xv, xa, xg = (x + xx * self.z[b + key] for key in ("x_r", "x_w", "x_k", "x_v", "x_a", "x_g"))
         r = self._matmul(xr, self.z[b + "receptance.weight"], self.n_embd)
         w = torch.tanh(self._matmul(xw, self.z[b + "w1"], self.n_embd)) @ self.z[b + "w2"]
@@ -521,22 +647,52 @@ class DeepEmbedReferenceModel:
         else:
             v = v + (v_first - v) * torch.sigmoid(self.z[b + "v0"] + (xv @ self.z[b + "v1"]) @ self.z[b + "v2"])
         w = torch.exp(-0.606531 * torch.sigmoid((self.z[b + "w0"] + w).float()))
-        outputs = []
+        if x.shape[0] == 1:
+            # Decode has one recurrent step. Keep the update order identical
+            # to the general loop while avoiding a one-row output allocation
+            # and Python loop on every streamed layer.
+            vt, wt, kt, kkt, at, rt = v[0], w[0], k[0], kk[0], a[0], r[0]
+            vk = vt.view(H, N, 1) @ kt.view(H, 1, N)
+            ab = (-kkt).view(H, N, 1) @ (kkt * at).view(H, 1, N)
+            state = state * wt.view(H, 1, N) + state @ ab.float() + vk.float()
+            y = (state.to(dtype=x.dtype) @ rt.view(H, N, 1)).view(1, H * N)
+            y = F.group_norm(
+                y,
+                num_groups=H,
+                weight=self.z[b + "ln_x.weight"],
+                bias=self.z[b + "ln_x.bias"],
+                eps=64e-5,
+            )
+            y = y + (
+                (
+                    (r * k * self.z[b + "r_k"])
+                    .view(-1, H, N)
+                    .sum(dim=-1, keepdim=True)
+                    * v.view(-1, H, N)
+                )
+                .view(-1, H * N)
+            )
+            return (y * g) @ self.z[b + "output.weight"], x[-1], state, v_first
+
+        outputs = torch.empty_like(x)
         for t in range(x.shape[0]):
             vt, wt, kt, kkt, at, rt = v[t], w[t], k[t], kk[t], a[t], r[t]
             vk = vt.view(H, N, 1) @ kt.view(H, 1, N)
             ab = (-kkt).view(H, N, 1) @ (kkt * at).view(H, 1, N)
             state = state * wt.view(H, 1, N) + state @ ab.float() + vk.float()
             y = state.to(dtype=x.dtype) @ rt.view(H, N, 1)
-            outputs.append(y.view(H * N))
-        y = torch.stack(outputs)
+            outputs[t] = y.view(H * N)
+        y = outputs
         y = F.group_norm(y, num_groups=H, weight=self.z[b + "ln_x.weight"], bias=self.z[b + "ln_x.bias"], eps=64e-5)
         y = y + ((r * k * self.z[b + "r_k"]).view(-1, H, N).sum(dim=-1, keepdim=True) * v.view(-1, H, N)).view(-1, H * N)
         return (y * g) @ self.z[b + "output.weight"], x[-1], state, v_first
 
     def _cmix_seq(self, layer_id: int, x: torch.Tensor, x_prev: torch.Tensor, s_emb: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         b = f"blocks.{layer_id}.ffn."
-        xx = torch.cat((x_prev.unsqueeze(0), x[:-1]), dim=0) - x
+        if x.shape[0] == 1:
+            xx = x_prev.unsqueeze(0) - x
+        else:
+            xx = torch.cat((x_prev.unsqueeze(0), x[:-1]), dim=0) - x
         k = torch.relu(x + xx * self.z[b + "x_k"])
         k = self._matmul(k, self.z[b + "key.weight"], self.n_embd) ** 2
         s1 = self._matmul(x, self.z[b + "s1"], self.n_embd)
@@ -545,6 +701,7 @@ class DeepEmbedReferenceModel:
         k = k * (self._matmul(ss, self.z[b + "s2"], int(ss.shape[-1])) + self.z[b + "s0"])
         return self._matmul(k, self.z[b + "value.weight"], int(k.shape[-1])), x[-1]
 
+    @torch.no_grad()
     def forward(self, idx: int | list[int], state: list[torch.Tensor] | None = None, full_output: bool = False):
         if self._streaming_layers:
             raise RuntimeError(
@@ -592,6 +749,7 @@ class DeepEmbedReferenceModel:
             normalized[key] = tensor.to(dtype=self.dtype).contiguous()
         return normalized
 
+    @torch.no_grad()
     def forward_streaming(
         self,
         idx: int | list[int],
@@ -619,19 +777,13 @@ class DeepEmbedReferenceModel:
         x = self.z["emb.weight"].index_select(0, ids)
         v_first = torch.empty_like(x)
         for layer_id in range(self.n_layer):
-            entries = [
-                entry
-                for entry in layer_entries.get(layer_id, [])
-                if not is_deepembed_tensor_name(str(getattr(entry, "name", "")))
-            ]
+            entries = self._stream_entries_for_layer(layer_entries, layer_id)
             if not entries:
                 raise KeyError(f"missing streamable DeepEmbed layer entries for layer {layer_id}")
             layer_tensors = self._normalize_stream_layer(
                 provider.load_layer_tensors(entries)
             )
-            previous_z = self.z
-            self.z = dict(previous_z)
-            self.z.update(layer_tensors)
+            overwritten = self._install_stream_layer(layer_tensors)
             try:
                 b = f"blocks.{layer_id}."
                 qkv, _, _, _ = self._dea(layer_id, x, state, ctx)
@@ -666,7 +818,7 @@ class DeepEmbedReferenceModel:
                 )
                 x = x + xx
             finally:
-                self.z = previous_z
+                self._restore_stream_layer(layer_tensors, overwritten)
         state[self.n_layer * 3] = ctx.detach()
         if not full_output:
             x = x[-1]
@@ -680,6 +832,251 @@ class DeepEmbedReferenceModel:
         self._rwkv_ssd_last_state = [tensor.detach().clone() for tensor in state]
         self._rwkv_ssd_last_token_id = int(ids[-1])
         return logits, state
+
+    @torch.no_grad()
+    def forward_batch_streaming(
+        self,
+        token_ids: Iterable[int] | torch.Tensor,
+        states: list[list[torch.Tensor]],
+        provider: Any,
+        layer_entries: Mapping[int, list[Any]],
+        *,
+        metrics: Any | None = None,
+    ) -> tuple[list[torch.Tensor], list[list[torch.Tensor]]]:
+        """Advance independent qkv/DEA states with one layer load per sweep.
+
+        qkv/DEA remains a CPU reference implementation, but it can still use
+        the same weight-stationary batching principle as ordinary RWKV-7:
+        load each ordinary layer once, then run that layer for every session.
+        The DeepEmbed lookup rows remain session-specific because each state
+        has its own context history.  This method handles one decode token per
+        session; ``forward_batch_prefill_streaming`` provides the corresponding
+        shared-layer path for equal or variable-length prompt sequences.
+        """
+        ids = (
+            token_ids.to(dtype=torch.long, device="cpu")
+            if isinstance(token_ids, torch.Tensor)
+            else torch.tensor(list(token_ids), dtype=torch.long)
+        )
+        if ids.ndim != 1 or ids.numel() == 0:
+            raise ValueError("DeepEmbed batch tokens must be a non-empty 1-D sequence")
+        if len(states) != int(ids.numel()):
+            raise ValueError("DeepEmbed batch tokens and states must be equally sized")
+
+        batch_size = int(ids.numel())
+        if metrics is not None:
+            metrics.batch_size = batch_size
+            metrics.weight_sweeps += 1
+
+        history_slot = self.n_layer * 3
+        contexts = [
+            torch.cat((state[history_slot], ids[index : index + 1]))
+            for index, state in enumerate(states)
+        ]
+        xs = [
+            self.z["emb.weight"].index_select(0, ids[index : index + 1])
+            for index in range(batch_size)
+        ]
+        v_first = [torch.empty_like(x) for x in xs]
+
+        for layer_id in range(self.n_layer):
+            entries = self._stream_entries_for_layer(layer_entries, layer_id)
+            if not entries:
+                raise KeyError(
+                    f"missing streamable DeepEmbed layer entries for layer {layer_id}"
+                )
+            layer_tensors = self._normalize_stream_layer(
+                provider.load_layer_tensors(entries)
+            )
+            overwritten = self._install_stream_layer(layer_tensors)
+            try:
+                for index, state in enumerate(states):
+                    x = xs[index]
+                    qkv, _, _, _ = self._dea(
+                        layer_id, x, state, contexts[index]
+                    )
+                    block = f"blocks.{layer_id}."
+                    xx = F.layer_norm(
+                        x,
+                        (self.n_embd,),
+                        weight=self.z[block + "ln1.weight"],
+                        bias=self.z[block + "ln1.bias"],
+                    )
+                    xx, next_prev, next_att, next_v_first = self._tmix_seq(
+                        layer_id,
+                        xx,
+                        state[layer_id * 3],
+                        state[layer_id * 3 + 1],
+                        v_first[index],
+                    )
+                    state[layer_id * 3] = next_prev
+                    state[layer_id * 3 + 1] = next_att
+                    x = x + xx + qkv
+                    xx = F.layer_norm(
+                        x,
+                        (self.n_embd,),
+                        weight=self.z[block + "ln2.weight"],
+                        bias=self.z[block + "ln2.bias"],
+                    )
+                    semb = self._table(
+                        "s_emb", layer_id, ids[index : index + 1]
+                    )
+                    xx, state[layer_id * 3 + 2] = self._cmix_seq(
+                        layer_id,
+                        xx,
+                        state[layer_id * 3 + 2],
+                        semb,
+                    )
+                    xs[index] = x + xx
+                    v_first[index] = next_v_first
+            finally:
+                self._restore_stream_layer(layer_tensors, overwritten)
+
+            if metrics is not None:
+                # ``load_layer_tensors`` owns read timing.  Count one logical
+                # streamed layer load for this shared sweep; per-session
+                # compute timing is intentionally left to the reference path.
+                metrics.weight_layer_loads += 1
+
+        for state, context in zip(states, contexts, strict=True):
+            state[history_slot] = context.detach()
+
+        logits = []
+        for x in xs:
+            x = x[-1]
+            x = F.layer_norm(
+                x,
+                (self.n_embd,),
+                weight=self.z["ln_out.weight"],
+                bias=self.z["ln_out.bias"],
+            )
+            logits.append(self._matmul(x, self.z["head.weight"], self.n_embd))
+        if states:
+            self._rwkv_ssd_last_state = [
+                tensor.detach().clone() for tensor in states[-1]
+            ]
+            self._rwkv_ssd_last_token_id = int(ids[-1])
+        return logits, states
+
+    @torch.no_grad()
+    def forward_batch_prefill_streaming(
+        self,
+        token_sequences: Iterable[Iterable[int] | torch.Tensor],
+        states: list[list[torch.Tensor]],
+        provider: Any,
+        layer_entries: Mapping[int, list[Any]],
+        *,
+        metrics: Any | None = None,
+    ) -> tuple[list[torch.Tensor], list[list[torch.Tensor]]]:
+        """Prefill independent qkv/DEA sessions with one load per layer.
+
+        qkv/DEA has context-indexed lookup rows, so a single padded tensor
+        cannot represent sessions with different prompt lengths without
+        changing its masking and state contract.  This method keeps the exact
+        per-session equations, but makes the scheduler layer-outer: each
+        ordinary layer is loaded once, then consumed by every prompt.  It is
+        therefore a safe CPU capacity optimization for both equal and
+        variable-length prompts, while remaining explicitly a reference path
+        until a fused variant-specific kernel exists.
+        """
+        sequences = [
+            (
+                values.to(dtype=torch.long, device="cpu")
+                if isinstance(values, torch.Tensor)
+                else torch.tensor(list(values), dtype=torch.long)
+            )
+            for values in token_sequences
+        ]
+        if not sequences or len(states) != len(sequences):
+            raise ValueError("DeepEmbed prefill sequences and states must be equally sized and non-empty")
+        if any(values.ndim != 1 or values.numel() == 0 for values in sequences):
+            raise ValueError("DeepEmbed prefill sequences must be non-empty 1-D token lists")
+
+        batch_size = len(sequences)
+        if metrics is not None:
+            metrics.batch_size = max(int(getattr(metrics, "batch_size", 0)), batch_size)
+            metrics.weight_sweeps += 1
+
+        history_slot = self.n_layer * 3
+        contexts = [
+            torch.cat((state[history_slot], values))
+            for state, values in zip(states, sequences, strict=True)
+        ]
+        xs = [self.z["emb.weight"].index_select(0, values) for values in sequences]
+        v_first = [torch.empty_like(x) for x in xs]
+
+        for layer_id in range(self.n_layer):
+            entries = self._stream_entries_for_layer(layer_entries, layer_id)
+            if not entries:
+                raise KeyError(
+                    f"missing streamable DeepEmbed layer entries for layer {layer_id}"
+                )
+            layer_tensors = self._normalize_stream_layer(
+                provider.load_layer_tensors(entries)
+            )
+            overwritten = self._install_stream_layer(layer_tensors)
+            try:
+                block = f"blocks.{layer_id}."
+                for index, state in enumerate(states):
+                    x = xs[index]
+                    qkv, _, _, _ = self._dea(
+                        layer_id, x, state, contexts[index]
+                    )
+                    xx = F.layer_norm(
+                        x,
+                        (self.n_embd,),
+                        weight=self.z[block + "ln1.weight"],
+                        bias=self.z[block + "ln1.bias"],
+                    )
+                    xx, next_prev, next_att, next_v_first = self._tmix_seq(
+                        layer_id,
+                        xx,
+                        state[layer_id * 3],
+                        state[layer_id * 3 + 1],
+                        v_first[index],
+                    )
+                    state[layer_id * 3] = next_prev
+                    state[layer_id * 3 + 1] = next_att
+                    x = x + xx + qkv
+                    xx = F.layer_norm(
+                        x,
+                        (self.n_embd,),
+                        weight=self.z[block + "ln2.weight"],
+                        bias=self.z[block + "ln2.bias"],
+                    )
+                    semb = self._table("s_emb", layer_id, sequences[index])
+                    xx, state[layer_id * 3 + 2] = self._cmix_seq(
+                        layer_id,
+                        xx,
+                        state[layer_id * 3 + 2],
+                        semb,
+                    )
+                    xs[index] = x + xx
+                    v_first[index] = next_v_first
+            finally:
+                self._restore_stream_layer(layer_tensors, overwritten)
+
+            if metrics is not None:
+                metrics.weight_layer_loads += 1
+
+        for state, context in zip(states, contexts, strict=True):
+            state[history_slot] = context.detach()
+
+        logits = []
+        for x in xs:
+            final = F.layer_norm(
+                x[-1],
+                (self.n_embd,),
+                weight=self.z["ln_out.weight"],
+                bias=self.z["ln_out.bias"],
+            )
+            logits.append(self._matmul(final, self.z["head.weight"], self.n_embd))
+        if states:
+            self._rwkv_ssd_last_state = [
+                tensor.detach().clone() for tensor in states[-1]
+            ]
+            self._rwkv_ssd_last_token_id = int(sequences[-1][-1])
+        return logits, states
 
 
 __all__ = [

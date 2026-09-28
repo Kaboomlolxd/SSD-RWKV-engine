@@ -24,10 +24,11 @@ The release boundary is intentionally narrow:
   GGML model. Its provider-backed pack path now includes a bounded native
   layer-local ABI and passes the F1-F4 throughput/memory acceptance matrix;
   longer 2.9B quality certification remains open.
-- The complete local CPU release gate is green: **636 passed, 22 skipped** in
-  `python -m pytest -q --override-ini "addopts="`; the vendored native gate is
-  **7/7 CTest targets** when configured with `-DGGML_CCACHE=OFF`; the local
-  ccache wrapper is unreliable on this host and is not part of the gate.
+- The complete local CPU release gate remains green: the September 1 follow-up
+  passed **600 tests, with 18 skipped** in
+  `python -m pytest -q --override-ini "addopts="`; the earlier vendored native
+  gate was **8/8 CTest targets** when configured with `-DGGML_CCACHE=OFF`. The
+  local ccache wrapper is unreliable on this host and is not part of the gate.
 - The wheel and native runtime still require an explicit asset/binary bundle;
   `rwkv-ssd-preflight` documents and checks that boundary.
 - The HTTP server has bounded admission and a configurable spawned process
@@ -97,7 +98,7 @@ remediation requested from that evaluation has now been applied:
   `runtime_pack_2.9b` resolves to the grouped-quality payload, which is
   3,689,844,744 bytes and passes the corrected three-prompt native smoke with
   a manifest-bound short-smoke certificate: maximum KL `0.010936`, minimum
-  top-10 overlap `0.90`, and maximum state drift `0.01500`. Long-run/held-out
+  top-10 overlap `0.90`, and maximum state relative L2 `0.034156`. Long-run/held-out
   quality certification remains open. The previous g64 artifact recorded KL
   `0.07539133727550507` against a configured maximum of `0.05`.
   The current F-tier matrix measured 1.90-2.25 tok/s for F1-F4 cold/warm
@@ -144,6 +145,29 @@ acceptance-tested, but long-run 2.9B generation quality remains open.
 CUDA/XPU/MPS/Albatross and other accelerator validation is intentionally still
 hardware-gated and is not represented as completed here.
 
+## CPU continuation update (2026-09-01)
+
+The non-hardware-gated CPU continuation added and validated grouped decode
+vectorization, direct DeepEmbed sidecar row reads, shared-layer qkv/DEA prompt
+prefill/decode reference batching, recurrent-state publication elision, native
+sequence scratch reuse, whole-pack zstd cold storage, and the packed native
+vocabulary-head memory option. Focused A/B probes retained only the options
+whose overhead was worthwhile: grouped-U8 decode improved **5.05x**, grouped
+LUT2 decode **4.63x**, and DeepEmbed sidecar lookup was approximately
+**19x–1,202x** faster depending on access pattern. The two-session DeepEmbed
+batch probe improved wall time **1.17x** with **50% fewer layer loads**; focused
+multi-layer probes reached **1.28x–1.75x**.
+
+The six-prompt, 32-position-per-prompt native quality probe passed its
+configured gates (top-10 **0.90**, KL **0.010936**, state relative L2
+**0.034156**), but it is supplemental evidence rather than a replacement for
+the existing manifest-bound three-prompt/eight-position certificate. The zstd
+probe reduced the 2.9B physical weights file from **3,689.8 MB to 3,128.8 MB**
+but increased load-plus-full-read time from **2,842.2 ms to 8,898.5 ms**, so
+raw mmap remains the hot-path default. No additional safe CPU optimization was
+promoted after these A/B measurements; the remaining work is qualification and
+hardware-gated acceleration.
+
 ## Scope and environment
 
 The original evaluation was performed against a heavily dirty worktree. The
@@ -175,11 +199,11 @@ The default pytest configuration excludes chatrwkv, slow, and integration marker
 
 | Run | Result | Interpretation |
 |---|---:|---|
-| Complete local Python suite (`--override-ini "addopts="`) | **636 passed, 22 skipped** | Includes parity, sequence-backend, Kimi-K3, serving, worker-pool, state-envelope, native bridge, and default-pack profile coverage |
+| Complete local Python suite (`--override-ini "addopts="`) | **600 passed, 18 skipped** (618 collected) | September 1 CPU continuation gate; includes parity, sequence-backend, Kimi-K3, serving, worker-pool, state-envelope, native bridge, and default-pack profile coverage |
 | Focused rwkv.cpp/backend bridge gate | **27 passed, 1 deselected** | Thread policy, native bridge, tokenizer guard, and provider synchronization covered |
-| rwkv.cpp native CTest gate | **7 passed** | Configured with `-DGGML_CCACHE=OFF`; includes the layer-local plan/upload/chunked-prefill/eviction ABI target |
+| rwkv.cpp native CTest gate | **8 passed** | Configured with `-DGGML_CCACHE=OFF`; includes the layer-local plan/upload/chunked-prefill/eviction ABI target |
 | Native SG8 ABI smoke | **Pass** | Bad magic, short/truncated payloads, and NaN metadata rejected; valid record accepted |
-| Native/real-model follow-up | **Pass (short-smoke certificate)** | Default g32 three-prompt native quality scope passes; longer held-out quality certification remains open |
+| Native/real-model follow-up | **Pass (short-smoke + supplemental long probe)** | Six-prompt/32-position teacher-forced probe also passes; manifest-bound certificate remains scoped to three prompts/eight positions and held-out/free-running quality remains open |
 | Python compilation | Pass | compileall completed successfully |
 | Dependency consistency | Pass | pip check completed successfully |
 | Ruff / mypy / bandit / pip-audit | Not installed | Static/security audit was not available in the environment |
@@ -266,7 +290,7 @@ The corresponding bench/results/rwkvcpp-quality-lut2-symmetric-g64.json artifact
 | Native pack/provider path | Synthetic correctness and performance tests pass | Good regression target; needs clean artifact/release validation |
 | rwkv.cpp resident + matching GGML | Functional; 2.9B best observed approximately 2.8 tok/s FP16, 3.5 tok/s Q5_1, 4.2–4.6 tok/s Q4_K | Usable CPU backend; native thread count is model-width aware and explicit overrides remain available |
 | rwkv.cpp raw FP16 pack streaming | Valid output observed | Experimental provider bridge; use parity-qualified packs only |
-| rwkv.cpp grouped-U8 streaming | Native SG8 packed-only graph evaluates correctly; historical g64 warm decode peaked around 2.62 tok/s at 4 threads, while current g32 short-smoke KL is 0.01087 | CPU experimental / pack-quality gated |
+| rwkv.cpp grouped-U8 streaming | Native SG8 packed-only graph evaluates correctly; historical g64 warm decode peaked around 2.62 tok/s at 4 threads, while current g32 short-smoke KL is 0.010936 | CPU experimental / pack-quality gated |
 | Mamba2 pack backend | Common generation/streaming/state/sampling/cancellation/metrics contract and qualified layer-stationary batch path pass self-reference tests | CPU/reference surface; broader checkpoint and performance qualification remains open |
 | Transformer/Llama pack backend | Common generation/streaming/KV-state/sampling/cancellation/metrics contract and qualified equal-length batch path pass self-reference tests | CPU/reference surface; model-format coverage remains capability-gated |
 | CUDA / XPU / MPS | Not available for this evaluation | No production claim can be made |
@@ -451,13 +475,16 @@ remains explicit.
 
 1. Keep all-LUT2 promotion blocked unless a pack certificate passes greedy
    parity, top-k overlap, KL, state-drift, and repetition checks.
-2. Extend the grouped-quality 2.9B certificate from short smoke runs to
-   multiple prompts and longer generations.
+2. A supplemental six-prompt/32-position teacher-forced probe passes the
+   configured gates; review its ignored local artifact before changing the
+   manifest-bound certificate, then extend qualification to held-out,
+   sustained, and free-running generation.
 3. Add a longer real-model rwkv.cpp provider-streaming certificate, including
    tokenizer compatibility and quality thresholds.
-4. Profile native grouped-U8 direct GEMV, transposed adapter GEMV, recurrent
-   state updates, and the vocabulary head separately; the current four-thread
-   result is useful but remains below the 15 tok/s target.
+4. Continue profiling native grouped-U8 direct GEMV, transposed adapter GEMV,
+   recurrent state updates, and the vocabulary head separately; the packed
+   vocabulary-head A/B is slower than dense BLAS, while the current four-thread
+   result remains below the 15 tok/s target.
 
 ### P1: make the runtime bundle reproducible
 
@@ -465,8 +492,11 @@ remains explicit.
    DLL paths in diagnostics.
 2. Add clean-venv real-model smoke coverage to CI, not only software/native
    tests.
-3. Add checkpoint hash, pack hash, codec, tokenizer version, and native ABI
-   metadata to release preflight output.
+3. **Implemented in the CPU preflight path.** `rwkv_ssd.tools.preflight` now
+   reports pack identity, codec/layout, source checkpoint hash (and checks it
+   against the pack when declared), tokenizer asset fingerprint/version, and
+   the loaded native library hash plus bridge ABI label. Publication of a
+   complete release bundle remains open.
 4. Add longer marked real-model/backend jobs when model artifacts are
    available to the runner.
 
@@ -562,7 +592,9 @@ recheck is recorded in
 three-prompt smoke is recorded in
 `bench/results/rwkvcpp_native_u8_2.9b_g32_3prompt.json`; the stable default
 selector recheck is recorded in
-`bench/results/rwkvcpp_native_u8_2.9b_default_3prompt.json`.
+`bench/results/rwkvcpp_native_u8_2.9b_default_3prompt.json`. A later local
+six-prompt/32-position teacher-forced probe is recorded in the ignored working
+tree artifact `bench/results/rwkvcpp_native_u8_2.9b_g32_6prompt_32tf.json`.
 
 The project now has a credible CPU release surface and a useful SSD/RAM-tier
 engine. The important production decision is the boundary: dense FP16/BF16 is

@@ -67,6 +67,11 @@ def shard_pack(
         raise ValueError(
             f"pack is already sharded ({len(manifest.shard_files)} shards)"
         )
+    if str(manifest.meta.get("weights_compression", "")).strip().lower() == "zstd":
+        raise ValueError(
+            "sharding compressed zstd packs is not supported: tensor offsets "
+            "refer to the decompressed image; decompress/repack first"
+        )
     if strategy == "stripe" and any(entry.fast_stripes for entry in manifest.tensors):
         raise ValueError("pack already contains striped BF16 shadow extents")
 

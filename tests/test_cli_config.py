@@ -10,6 +10,7 @@ import yaml
 from rwkv_ssd.runtime.config import EngineConfig
 from rwkv_ssd.tools.make_synthetic_pack import create_synthetic_pack
 from app.engine_args import add_engine_args, build_engine_config
+from app.cli import _should_interact
 
 
 def test_config_yaml_load(tmp_path: Path) -> None:
@@ -281,7 +282,7 @@ def test_serve_parser_does_not_override_config_defaults(tmp_path: Path) -> None:
     )
     parser = argparse.ArgumentParser()
     add_engine_args(parser, for_serve=True)
-    args = parser.parse_args(["--model", str(pack), "--config", str(cfg_path)])
+    args = parser.parse_args(["--config", str(cfg_path)])
     cfg = build_engine_config(args)
     assert cfg.backend == "synthetic"
     assert cfg.mode == "resident"
@@ -313,6 +314,52 @@ def test_cli_smoke(synthetic_pack: Path) -> None:
         cwd=str(Path(__file__).resolve().parents[1]),
     )
     assert r.returncode == 0, r.stderr
+
+
+def test_cli_prompt_file_smoke(synthetic_pack: Path, tmp_path: Path) -> None:
+    prompt_file = tmp_path / "prompt.txt"
+    prompt_file.write_text("prompt from file", encoding="utf-8")
+    r = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "app.cli",
+            "--model",
+            str(synthetic_pack),
+            "--backend",
+            "synthetic",
+            "--prompt-file",
+            str(prompt_file),
+            "--max-tokens",
+            "2",
+            "--log-level",
+            "WARNING",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parents[1]),
+    )
+    assert r.returncode == 0, r.stderr
+    assert "Loading synthetic CPU model" in r.stderr
+
+
+def test_cli_rejects_missing_prompt_on_noninteractive_stdin(synthetic_pack: Path) -> None:
+    r = subprocess.run(
+        [sys.executable, "-m", "app.cli", "--model", str(synthetic_pack), "--backend", "synthetic"],
+        input="",
+        capture_output=True,
+        text=True,
+        cwd=str(Path(__file__).resolve().parents[1]),
+    )
+    assert r.returncode != 0
+    assert "No prompt provided" in r.stderr
+
+
+def test_cli_interactive_default_requires_terminal_without_prompt() -> None:
+    assert _should_interact(None, False, True) is True
+    assert _should_interact(None, False, False) is False
+    assert _should_interact("hello", False, True) is False
+    assert _should_interact(None, True, False) is True
 
 
 def test_default_backend_is_rwkvcpp(tmp_path: Path) -> None:

@@ -18,6 +18,30 @@ from rwkv_ssd.native.lut2_gather_loader import native_lib_path
 from rwkv_ssd.runtime.manifest import Manifest
 from rwkv_ssd.runtime.pack_profiles import resolve_trinity_pack
 from rwkv_ssd.runtime.pack_verify import verify_pack
+from rwkv_ssd.runtime.state_envelope import model_fingerprint, tokenizer_fingerprint
+
+
+def _sha256_path(path: Path) -> str:
+    """Hash a checkpoint file or a deterministic directory of shards."""
+    digest = hashlib.sha256()
+    if path.is_file():
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+        return digest.hexdigest()
+    if path.is_dir():
+        files = sorted(item for item in path.rglob("*") if item.is_file())
+        if not files:
+            return "missing"
+        root = path.resolve()
+        for item in files:
+            digest.update(item.relative_to(root).as_posix().encode("utf-8"))
+            digest.update(b"\0")
+            with item.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+        return digest.hexdigest()
+    return "missing"
 
 
 def run_preflight(
@@ -29,6 +53,17 @@ def run_preflight(
     requested_root = Path(pack_dir)
     root = resolve_trinity_pack(requested_root)
     checks: list[dict[str, Any]] = []
+    identity: dict[str, Any] = {
+        "pack_identity_sha256": None,
+        "codec": None,
+        "pack_layout": None,
+        "checkpoint_sha256": None,
+        "checkpoint_sha256_expected": None,
+        "tokenizer_sha256": None,
+        "tokenizer_version": None,
+        "native_abi": None,
+        "native_library_sha256": None,
+    }
 
     def check(name: str, ok: bool, detail: str) -> None:
         checks.append({"name": name, "ok": bool(ok), "detail": detail})
@@ -38,6 +73,12 @@ def run_preflight(
 
     try:
         manifest = Manifest.load(root, require_quality_certificate=True)
+        identity["codec"] = manifest.meta.get("pack_codec", "none")
+        identity["pack_layout"] = manifest.meta.get("pack_layout", "default")
+        identity["checkpoint_sha256_expected"] = manifest.meta.get(
+            "checkpoint_sha256"
+        )
+        identity["checkpoint_sha256"] = identity["checkpoint_sha256_expected"]
         check(
             "pack",
             True,
@@ -47,9 +88,25 @@ def run_preflight(
         check("pack", False, str(exc))
         manifest = None
 
+    try:
+        identity["pack_identity_sha256"] = model_fingerprint(root)
+        check("pack_identity", True, identity["pack_identity_sha256"])
+    except (FileNotFoundError, OSError, ValueError) as exc:
+        check("pack_identity", False, str(exc))
+
     if checkpoint is not None:
         path = Path(checkpoint)
-        check("checkpoint", path.is_file(), str(path))
+        check("checkpoint", path.is_file() or path.is_dir(), str(path))
+        if path.is_file() or path.is_dir():
+            identity["checkpoint_sha256"] = _sha256_path(path)
+            check("checkpoint_identity", True, identity["checkpoint_sha256"])
+            expected = identity["checkpoint_sha256_expected"]
+            if expected:
+                check(
+                    "checkpoint_compatibility",
+                    identity["checkpoint_sha256"] == expected,
+                    f"expected {expected}, got {identity['checkpoint_sha256']}",
+                )
 
     normalized = backend.strip().lower()
     backend_aliases = {
@@ -74,15 +131,17 @@ def run_preflight(
         root_path = find_chatrwkv_root()
         check("chatrwkv", root_path is not None, str(root_path or "not found"))
     elif canonical_backend == "rwkvcpp":
+        identity["native_abi"] = "ggml-weight-bridge-v2 + native-layer-streaming"
         cpp_root = find_rwkvcpp_root()
         cpp_dll = find_rwkvcpp_dll(cpp_root) if cpp_root is not None else None
         check("rwkvcpp_root", cpp_root is not None, str(cpp_root or "not found"))
         check("rwkvcpp_dll", cpp_dll is not None, str(cpp_dll or "not found"))
         if cpp_dll is not None:
+            identity["native_library_sha256"] = _sha256_path(cpp_dll)
             check(
                 "rwkvcpp_dll_sha256",
                 True,
-                hashlib.sha256(cpp_dll.read_bytes()).hexdigest(),
+                identity["native_library_sha256"],
             )
         if checkpoint is None:
             check("ggml", False, "rwkvcpp requires --checkpoint or RWKVCPP_GGML_PATH")
@@ -95,6 +154,16 @@ def run_preflight(
                 check("ggml", ggml.is_file(), str(ggml))
 
     if manifest is not None:
+        identity["tokenizer_sha256"] = tokenizer_fingerprint(root)
+        identity["tokenizer_version"] = (
+            manifest.meta.get("tokenizer_version")
+            or manifest.meta.get("tokenizer_revision")
+            or manifest.meta.get("tokenizer_name")
+        )
+        if identity["tokenizer_sha256"] == "missing":
+            check("tokenizer_identity", True, "no tokenizer assets declared in pack")
+        else:
+            check("tokenizer_identity", True, identity["tokenizer_sha256"])
         valid, messages = verify_pack(root, check_hash=True)
         check(
             "pack_integrity",
@@ -127,6 +196,7 @@ def run_preflight(
         "passed": passed,
         "pack": str(root),
         "backend": normalized,
+        "identity": identity,
         "checks": checks,
     }
 
@@ -146,8 +216,43 @@ def main() -> None:
     if args.json:
         print(json.dumps(result, indent=2))
     else:
+        print(f"CPU preflight for {result['pack']} using {result['backend']}")
+        identity = result.get("identity", {})
+        if identity.get("codec") is not None:
+            pack_id = identity.get("pack_identity_sha256") or "unavailable"
+            print(
+                "Artifact: "
+                f"codec={identity.get('codec')} "
+                f"layout={identity.get('pack_layout')} "
+                f"identity={pack_id}"
+            )
         for item in result["checks"]:
             print(f"{'PASS' if item['ok'] else 'FAIL'} {item['name']}: {item['detail']}")
+        failed = [item for item in result["checks"] if not item["ok"]]
+        if failed:
+            print("\nNext steps:")
+            hints = {
+                "pack": "Check that --pack points to a prepared runtime pack with manifest.json and weights.bin.",
+                "pack_integrity": "Recreate or restore the pack, then rerun rwkv-ssd-pack and preflight.",
+                "checkpoint": "Supply the original checkpoint with --checkpoint.",
+                "checkpoint_compatibility": "Use the checkpoint used to create this pack.",
+                "chatrwkv": "Install or clone ChatRWKV and set CHATRWKV_ROOT to its directory.",
+                "rwkvcpp_root": "Initialize/build backends/rwkvcpp_ref or set RWKVCPP_ROOT.",
+                "rwkvcpp_dll": "Build the rwkv.cpp shared library or set RWKVCPP_DLL to it.",
+                "ggml": "Convert the matching checkpoint to GGML or set RWKVCPP_GGML_PATH.",
+                "lut2_native": "Build/install the CPU LUT2 native extension required by this pack codec.",
+            }
+            emitted: set[str] = set()
+            for item in failed:
+                hint = hints.get(item["name"])
+                if hint:
+                    key = item["name"]
+                    if hint not in emitted:
+                        print(f"- {key}: {hint}")
+                        emitted.add(hint)
+            print("See docs/MODEL_IMPORT.md and docs/BACKENDS.md for the CPU setup steps.")
+        else:
+            print("\nPreflight passed. The pack and selected backend prerequisites are ready.")
     raise SystemExit(0 if result["passed"] else 1)
 
 

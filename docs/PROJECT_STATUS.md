@@ -9,7 +9,7 @@ For the full architecture/path matrix, working-tree risks, and production
 readiness decision, see [`REPOSITORY_AUDIT.md`](REPOSITORY_AUDIT.md). This file
 remains the shorter recommendation page.
 
-Updated: 2026-07-31
+Updated: 2026-09-01
 
 ## Current recommendation
 
@@ -29,9 +29,20 @@ baseline when the full checkpoint fits in RAM.
 The current CPU path is release-safe within the tested model/pack boundary:
 the four-way ChatRWKV/rwkv.cpp conformance harness passes exact greedy
 token/text parity on the checked-in 0.1B fixture, including provider streaming;
-the minimum native top-10 overlap is 0.90, KL stays below 0.005, and relative
-state error stays below 0.016 for the certification prompts. The mixed-codec
-QKV fast path is enabled and the short-prompt prefill regression is fixed.
+that fixture's minimum native top-10 overlap is 0.90, KL stays below 0.005,
+and relative state error stays below 0.016. Separately, the current 2.9B
+grouped-U8 g32 certificate covers three prompts plus eight teacher-forced
+autoregressive positions per prompt and reports minimum top-10 overlap 0.90,
+maximum KL 0.0109365, and maximum state relative L2 0.0341558. Those values
+are certificate evidence for the declared short-smoke scope, not broad
+held-out or free-running quality qualification. The mixed-codec QKV fast path
+is enabled and the short-prompt prefill regression is fixed.
+
+The native rwkv.cpp layer ABI also supports CPU layer-outer/session-inner batch
+prefill and decode. On the real 0.1B pack, two warm sessions generating four tokens each
+measured 2.67–3.27 aggregate tok/s versus 1.34–1.60 tok/s independently, with
+exact greedy output parity. This is shared-scheduling capacity evidence, not a
+single-session latency or physical-SSD claim.
 Treat the measured tok/s below as local CPU evidence, not a hardware-independent
 SLA.
 
@@ -52,6 +63,36 @@ The native layer ABI now has transient and provider-owned persistent dense
 borrowing, plus explicit eviction invalidation. This removes the dense
 upload-copy from eligible bounded-provider paths without turning strict F1 or
 an mmap-only temporary view into a hidden full-model cache.
+
+Release preflight now reports a deterministic pack identity, codec/layout,
+source checkpoint hash (and verifies a declared match), tokenizer fingerprint,
+and native library/bridge ABI identity. A published multi-artifact bundle and
+clean-checkout model smoke remain release-operations work.
+
+The CPU packer also supports an opt-in whole-pack zstd cold-storage variant
+(`--compress zstd`). It keeps logical tensor offsets stable and expands once
+into host RAM at load. On the current 2.9B grouped pack, the benchmark reduced
+the physical weights file from 3,689.8 MB to 3,128.8 MB, but made the
+three-repeat load-plus-full-read probe slower (8,898.5 ms vs 2,842.2 ms), so
+uncompressed mmap remains the default for hot packs.
+
+The qkv/DEA DeepEmbed reference now supports shared-layer prompt prefill and
+decode: each ordinary layer is loaded once and then applied to every session
+state while sidecar lookup rows remain session-specific. The maintained
+two-session, six-step CPU probe matched independent logits and recurrent
+states exactly, ran 1.17x faster, and reduced layer loads by 50%; focused
+multi-layer regression probes have measured 1.28–1.75x. This is a capacity
+optimization for the reference path; the production fused qkv/DEA path and
+broad real-model quality qualification remain open.
+
+Uncontrolled generation now elides intermediate recurrent-state publication and
+copies the final state/logits once per request; controlled generation retains the
+pre-token snapshots required for callbacks, cancellation, and deadlines. The
+latest local 64-token probe measured 5.758 ms per 2.9B-like avoided copy, or
+roughly 368.5 ms of copy work avoided. The bounded native rwkv.cpp layer path also has an explicit
+`RWKVCPP_NATIVE_LAYER_PACKED_HEAD=1` memory-saving mode. It remains opt-in: the
+measured packed vocabulary projection was about 34.4 ms versus 21.6 ms for the
+dense BLAS head.
 
 ## Latest 2.9B CPU comparison
 
@@ -120,6 +161,13 @@ The spread is expected on these very short CPU runs.
 | CPU ChatRWKV BF16 streaming | Supported, quality baseline | operator-prepared RWKV pack + checkpoint |
 | CPU legacy LUT2 F1/F3 | Removed; superseded by grouped-U8 and failed quality gates | historical benchmark results only |
 | CPU native-safe grouped-U8 direct GEMV | Promoted compact direction; exact pack certificate and bounded native F1-F4 throughput/memory gates required, while long-run quality remains open | `rwkv_ssd/native/lut2_gather.c`, `docs/MODEL_IMPORT.md` |
+| CPU grouped-U8 decode | Broadcasted complete-group decode avoids per-element group-index allocation; measured 5.05x faster in the current 4.2M-element microbench | `rwkv_ssd/runtime/pack_codec.py`, `bench/bench_cpu_optimizations.py` |
+| CPU whole-pack zstd cold storage | Optional and quality-neutral; logical offsets verified and transparent through mmap/pread/threaded stores; hot-read overhead keeps it opt-in | `rwkv_ssd/tools/pack_runtime.py`, `rwkv_ssd/runtime/io_zstd.py` |
+| CPU recurrent-state publication | Uncontrolled decode publishes only the final state/logits; controlled decode preserves resumable pre-token snapshots | `rwkv_ssd/backends/rwkv7_forward.py`, `rwkv_ssd/backends/rwkvcpp.py` |
+| rwkv.cpp packed vocabulary head | Implemented as an explicit memory-saving option; rejected as the default speed path after packed GEMV measured slower than dense BLAS | `RWKVCPP_NATIVE_LAYER_PACKED_HEAD=1`, `rwkv_ssd/backends/rwkvcpp.py` |
+| CPU DeepEmbed sidecar lookup | Direct mmap row reads avoid full vocabulary-table copies; measured approximately 19–1,202x faster across scattered, contiguous, and single-row probes on a 64 MiB table | `rwkv_ssd/runtime/deepembed.py`, `bench/bench_cpu_optimizations.py` |
+| CPU qkv/DEA batch prefill/decode | Optimized reference-only shared-layer prompt prefill and decode with exact state/logit parity; current two-session probe is 1.17x with 50% fewer layer loads, while focused multi-layer probes reached 1.28–1.75x | `rwkv_ssd/runtime/deepembed.py`, `tests/test_deepembed.py` |
+| CPU rwkv.cpp shared-sweep batch prefill/decode | Native layer-outer/session-inner prefill and decode with exact 0.1B two-session greedy parity; 2.67–3.27 aggregate tok/s versus 1.34–1.60 independently; repeatable A/B runner added | `rwkv_ssd/backends/rwkvcpp.py`, `rwkv_ssd/runtime/engine.py`, `bench/bench_rwkvcpp_weight_stationary.py` |
 | rwkv.cpp native grouped-U8 | Packed-only CPU graph; ~2.62 tok/s warm at four threads, with native ABI and malformed-record checks | `backends/rwkvcpp_ref/rwkv_native_u8.inc`, `docs/BACKENDS.md` |
 | rwkv.cpp native GGML | Supported CPU backend; ~2.8 tok/s FP16, ~3.5 tok/s Q5_1, and ~4.2–4.6 tok/s Q4_K best observed on 2.9B | `docs/BACKENDS.md`, `tests/test_rwkvcpp_backend.py` |
 | ChatRWKV/rwkv.cpp four-way parity | Exact greedy token/text match on checked-in 0.1B prompts; configurable logit/state guardrails pass | `bench/bench_backend_conformance.py`, `tests/test_parity_conformance.py` |

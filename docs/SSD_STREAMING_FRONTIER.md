@@ -359,14 +359,16 @@ drained and closed. An explicit `cache_format` disables adaptation.
 
 The CPU path also includes bounded prototypes for the next research tranche:
 
-- `InferenceEngine.generate_batch()` supports synthetic batching and real dense
-  ChatRWKV layer-outer/session-inner decode: one streamed layer advances every
-  active recurrent state before eviction. The real 0.1B CPU gate has exact
-  greedy output parity and, for two sessions with eight decode tokens each,
-  measured 1.12 to 1.89 aggregate end-to-end tok/s and 1.37 to 2.75 aggregate
-  decode-only tok/s. Per-session token latency remained about 0.73 seconds, so
-  this is a capacity win rather than a latency win. rwkv.cpp batching remains
-  blocked on its native per-layer graph.
+- `InferenceEngine.generate_batch()` supports synthetic batching, dense ChatRWKV
+  layer-outer/session-inner prefill/decode, and the native rwkv.cpp equivalent.
+  One streamed layer advances every active recurrent state before eviction. The
+  ChatRWKV 0.1B CPU gate has exact greedy output parity and, for two sessions
+  with eight decode tokens each, measured 1.12 to 1.89 aggregate end-to-end
+  tok/s and 1.37 to 2.75 aggregate decode-only tok/s. Per-session token
+  latency remained about 0.73 seconds. The native rwkv.cpp 0.1B warm probe
+  measured 2.67–3.27 aggregate tok/s for two sessions generating four tokens
+  each, versus 1.34–1.60 tok/s independently, with exact output parity. These
+  are capacity results, not single-session latency or physical-SSD claims.
 - CMix tiled matrices support exact temporal tile prefetch with synchronous
   miss fallback, a byte-bounded hot-tile cache, co-activation physical ordering,
   and adjacent-tile read coalescing.
