@@ -1196,6 +1196,150 @@ LUT2_EXPORT void scale_u8_grouped_sparse_gemv_f32_export(
     );
 }
 
+/* Fused CMix path that skips zero activation columns in the value projection.
+
+   The regular fused CMix kernel keeps the key activation private to C, but
+   always evaluates the dense value GEMV.  RWKV-7 squares ReLU(key), so a
+   sufficiently sparse key activation can be exploited without another
+   approximation. Sparse and dense reductions can differ in floating-point
+   rounding. This entry point computes the key projection, counts its nonzero
+   entries, and selects the existing dense or sparse value kernel.  The
+   threshold is supplied by the caller because sparsity varies by model and
+   layer. Returns 0 on success, 1 for invalid arguments, 2 for allocation
+   failure. The caller must discard output on failure. */
+LUT2_EXPORT int scale_u8_grouped_cmix_sparse_gemv_f32_export(
+    float* y,
+    const uint8_t* key_blob,
+    const uint8_t* value_blob,
+    const float* x,
+    int key_out_features,
+    int key_in_features,
+    int value_out_features,
+    int value_in_features,
+    float active_fraction_threshold
+) {
+    if (y == NULL || key_blob == NULL || value_blob == NULL || x == NULL
+        || key_out_features <= 0 || key_in_features <= 0
+        || value_out_features <= 0 || value_in_features != key_out_features) {
+        return 1;
+    }
+    const uint32_t key_group_size = lut2_read_u32(key_blob + 4u);
+    const uint32_t value_group_size = lut2_read_u32(value_blob + 4u);
+    if (key_group_size == 0u || value_group_size == 0u) {
+        return 1;
+    }
+    float* key_activation = (float*)malloc(
+        (size_t)key_out_features * sizeof(float)
+    );
+    if (key_activation == NULL) {
+        return 2;
+    }
+    const size_t key_n = (size_t)key_out_features
+        * (size_t)key_in_features;
+    const size_t key_groups = (key_n + (size_t)key_group_size - 1u)
+        / (size_t)key_group_size;
+    const uint8_t* key_scales = key_blob + 8u;
+    const uint8_t* key_quant = key_scales + key_groups * 8u;
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) if (key_out_features > 64)
+#endif
+    for (int row = 0; row < key_out_features; ++row) {
+        const size_t row_base = (size_t)row * (size_t)key_in_features;
+        float value;
+#if LUT2_HAS_AVX2
+        if ((key_group_size & 7u) == 0u) {
+            value = scale_u8_grouped_row_avx2(
+                key_scales, key_quant, x, key_in_features,
+                key_group_size, row_base
+            );
+        } else
+#endif
+        {
+            value = scale_u8_grouped_row(
+                key_scales, key_quant, x, key_in_features,
+                key_group_size, row_base
+            );
+        }
+        key_activation[row] = value > 0.0f ? value * value : 0.0f;
+    }
+
+    float threshold = active_fraction_threshold;
+    if (!(threshold >= 0.0f)) threshold = 0.0f;
+    if (threshold > 1.0f) threshold = 1.0f;
+    int sparse_limit = (int)((float)key_out_features * threshold);
+    if ((float)sparse_limit < (float)key_out_features * threshold) {
+        ++sparse_limit;
+    }
+    int active_count = 0;
+    for (int row = 0; row < key_out_features; ++row) {
+        if (key_activation[row] != 0.0f) {
+            ++active_count;
+        }
+    }
+
+    const size_t value_n = (size_t)value_out_features
+        * (size_t)value_in_features;
+    const size_t value_groups = (value_n + (size_t)value_group_size - 1u)
+        / (size_t)value_group_size;
+    const uint8_t* value_scales = value_blob + 8u;
+    const uint8_t* value_quant = value_scales + value_groups * 8u;
+    if (active_count == 0) {
+        memset(y, 0, (size_t)value_out_features * sizeof(float));
+        free(key_activation);
+        return 0;
+    }
+    int32_t* active_indices = NULL;
+    if (sparse_limit > 0 && active_count < sparse_limit) {
+        active_indices = (int32_t*)malloc(
+            (size_t)active_count * sizeof(int32_t)
+        );
+        if (active_indices != NULL) {
+            int cursor = 0;
+            for (int row = 0; row < key_out_features; ++row) {
+                if (key_activation[row] != 0.0f) {
+                    active_indices[cursor++] = row;
+                }
+            }
+        }
+    }
+    if (active_indices == NULL) {
+        /* Dense evaluation is also the allocation-failure fallback. */
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) if (value_out_features > 64)
+#endif
+        for (int row = 0; row < value_out_features; ++row) {
+            const size_t row_base = (size_t)row * (size_t)value_in_features;
+#if LUT2_HAS_AVX2
+            if ((value_group_size & 7u) == 0u) {
+                y[row] = scale_u8_grouped_row_avx2(
+                    value_scales, value_quant, key_activation,
+                    value_in_features, value_group_size, row_base
+                );
+                continue;
+            }
+#endif
+            y[row] = scale_u8_grouped_row(
+                value_scales, value_quant, key_activation,
+                value_in_features, value_group_size, row_base
+            );
+        }
+    } else {
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static) if (value_out_features > 16)
+#endif
+        for (int row = 0; row < value_out_features; ++row) {
+            y[row] = scale_u8_grouped_row_sparse(
+                value_scales, value_quant, key_activation,
+                active_indices, active_count, value_in_features,
+                value_group_size, (size_t)row * (size_t)value_in_features
+            );
+        }
+        free(active_indices);
+    }
+    free(key_activation);
+    return 0;
+}
+
 /* Batched SG8 TMix: attention maps with distinct input vectors.
 
    The ordinary grouped-U8 entry point launches one OpenMP region per matrix.

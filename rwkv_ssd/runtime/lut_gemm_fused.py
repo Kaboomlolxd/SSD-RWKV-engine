@@ -1270,12 +1270,12 @@ def grouped_u8_sparse_gemv(
     in_features: int,
     active_fraction_threshold: float | None = None,
 ) -> torch.Tensor:
-    """Run an exact sparse value GEMV when post-ReLU activations are sparse.
+    """Run a zero-skipping value GEMV when post-ReLU activations are sparse.
 
     The sparse ABI is an optimization for ``scale_u8_grouped`` CMix value
     matrices.  It skips only entries where ``x == 0`` and uses the same
-    per-group affine reduction as the dense native kernel, so this does not
-    introduce an additional approximation.  Dense dispatch is retained when
+    per-group affine reduction as the dense native kernel. Sparse and dense
+    floating-point accumulation can differ in rounding. Dense dispatch is retained when
     the active fraction is high, when a legacy native DLL lacks the optional
     symbol, or when a non-native kernel is explicitly selected.
     """
@@ -1371,6 +1371,63 @@ def _scale_u8_grouped_cmix_gemv_native(
     return y
 
 
+def _scale_u8_grouped_cmix_sparse_gemv_native(
+    key_blob: bytes | memoryview,
+    value_blob: bytes | memoryview,
+    x_np: np.ndarray,
+    *,
+    key_out_features: int,
+    key_in_features: int,
+    value_out_features: int,
+    value_in_features: int,
+    active_fraction_threshold: float,
+) -> np.ndarray:
+    """Run native CMix while skipping zero activation columns when sparse."""
+    from rwkv_ssd.native.lut2_gather_loader import lib
+
+    native = lib()
+    fn = getattr(native, "scale_u8_grouped_cmix_sparse_gemv_f32_export", None)
+    if fn is None:
+        return _scale_u8_grouped_cmix_gemv_native(
+            key_blob,
+            value_blob,
+            x_np,
+            key_out_features=key_out_features,
+            key_in_features=key_in_features,
+            value_out_features=value_out_features,
+            value_in_features=value_in_features,
+        )
+    key_view, key_ptr = _native_blob_view(key_blob)
+    value_view, value_ptr = _native_blob_view(value_blob)
+    x_f32 = np.ascontiguousarray(x_np, dtype=np.float32)
+    y = np.empty(value_out_features, dtype=np.float32)
+    x_f = (ctypes.c_float * key_in_features).from_buffer(memoryview(x_f32))
+    y_f = (ctypes.c_float * value_out_features).from_buffer(y)
+    status = fn(
+        y_f,
+        key_ptr,
+        value_ptr,
+        x_f,
+        int(key_out_features),
+        int(key_in_features),
+        int(value_out_features),
+        int(value_in_features),
+        float(active_fraction_threshold),
+    )
+    del key_view, value_view, x_f, y_f
+    if status == 2:
+        raise MemoryError("Native sparse CMix could not allocate key activations")
+    if status != 0:
+        raise ValueError("Native sparse CMix rejected its arguments")
+    return y
+
+
+def grouped_u8_cmix_sparse_fused_enabled() -> bool:
+    """Return whether the experimental sparse CMix fusion is enabled."""
+    raw = os.environ.get("RWKV_LUT_CMIX_SPARSE_FUSED", "0").strip().lower()
+    return raw in ("1", "true", "yes", "on")
+
+
 def grouped_u8_cmix_gemv(
     key_blob: bytes | memoryview,
     value_blob: bytes | memoryview,
@@ -1392,15 +1449,33 @@ def grouped_u8_cmix_gemv(
     kernel = _lut_kernel_pref()
     if kernel in ("c", "auto"):
         try:
-            y_np = _scale_u8_grouped_cmix_gemv_native(
-                key_blob,
-                value_blob,
-                x_np,
-                key_out_features=key_out_features,
-                key_in_features=key_in_features,
-                value_out_features=value_out_features,
-                value_in_features=value_in_features,
-            )
+            if grouped_u8_cmix_sparse_fused_enabled():
+                try:
+                    threshold = float(
+                        os.environ.get("RWKV_LUT_SPARSE_THRESHOLD", "0.05")
+                    )
+                except ValueError:
+                    threshold = 0.05
+                y_np = _scale_u8_grouped_cmix_sparse_gemv_native(
+                    key_blob,
+                    value_blob,
+                    x_np,
+                    key_out_features=key_out_features,
+                    key_in_features=key_in_features,
+                    value_out_features=value_out_features,
+                    value_in_features=value_in_features,
+                    active_fraction_threshold=threshold,
+                )
+            else:
+                y_np = _scale_u8_grouped_cmix_gemv_native(
+                    key_blob,
+                    value_blob,
+                    x_np,
+                    key_out_features=key_out_features,
+                    key_in_features=key_in_features,
+                    value_out_features=value_out_features,
+                    value_in_features=value_in_features,
+                )
             return _lut2_torch_from_f32(y_np, x)
         except Exception:
             if kernel == "c":

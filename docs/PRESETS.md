@@ -191,6 +191,7 @@ Bench: `python bench/bench_io_ceiling.py --max-tokens 24 --samples 2`
 | `RWKV_LUT_ACTIVATION_FP32` | `auto` / `0` / `1` | Fused CPU activation dtype; `auto` keeps packed blocks in FP32 when Torch reports no AVX512-BF16, avoiding repeated BF16/FP32 conversions; mixed dense/packed tiers stay on their native dtype |
 | `RWKV_LUT_ACTIVATION_INT8` | `0` / `1` | Experimental SG8 activation quantization; can materially change greedy tokens, so leave at `0` for quality-certified runs |
 | `RWKV_LUT_ACTIVATION_INT8_HEAD` | `0` / `1` | Experimental INT8 activation quantization for the vocabulary head; independently gated because head perturbations can change argmax |
+| `RWKV_LUT_CMIX_SPARSE_FUSED` | `0` / `1` | Default `0`; experimental SG8 CMix fusion in the LUT runtime; skips zero activation columns when the active fraction is below `RWKV_LUT_SPARSE_THRESHOLD`, default `0.05`; floating-point rounding can differ from dense evaluation; requires rebuilding the LUT DLL for the optional export |
 | `RWKVCPP_NATIVE_U8` | `auto` / `0` / `1` | Enable the CPU-native rwkv.cpp SG8 grouped-U8 graph for non-resident grouped matrix packs; `0` forces dense GGML uploads |
 | `RWKVCPP_NATIVE_U8_PACKED_ONLY` | `auto` / `0` / `1` | Omit dense 2-D matrix payloads from the native GGML skeleton; use `1` only for an all-grouped matrix manifest |
 | `RWKVCPP_NATIVE_LAYER_PACKED_HEAD` | `auto` / `0` / `1` | Keep the bounded native layer path's vocabulary head packed to save RAM; opt-in because the measured packed GEMV is slower than dense BLAS |

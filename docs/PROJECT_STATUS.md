@@ -113,6 +113,11 @@ different cold-start tradeoffs, so both are recorded.
 | Resident vs grouped streaming, 16 greedy tokens | **exact token match** | Same checkpoint/pack | Pack-streaming parity certificate passed |
 | Actual `InferenceEngine` resident vs streaming, 8 tokens | **exact token match** | Same 2.9B checkpoint/pack | `tests/test_real_model_streaming.py` passed |
 
+The native grouped-U8 GEMV now reuses per-input group sums for aligned matrices
+and assigns contiguous output rows to each worker. This is a source and DLL
+optimization only. The rates above predate it, and no benchmark or parity run
+has been repeated for this change.
+
 ### Current rwkv.cpp F-tier gate status
 
 The acceptance harness reports cold and warm rows separately and now enforces

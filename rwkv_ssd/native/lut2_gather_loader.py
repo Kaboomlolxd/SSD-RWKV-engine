@@ -250,6 +250,19 @@ def load_native(lib_path: Path | None = None) -> ctypes.CDLL:
             ctypes.c_int,
         ]
         lib.scale_u8_grouped_cmix_gemv_f32_export.restype = None
+    if hasattr(lib, "scale_u8_grouped_cmix_sparse_gemv_f32_export"):
+        lib.scale_u8_grouped_cmix_sparse_gemv_f32_export.argtypes = [
+            ctypes.POINTER(ctypes.c_float),
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.POINTER(ctypes.c_uint8),
+            ctypes.POINTER(ctypes.c_float),
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_int,
+            ctypes.c_float,
+        ]
+        lib.scale_u8_grouped_cmix_sparse_gemv_f32_export.restype = ctypes.c_int
     if hasattr(lib, "scale_u8_grouped_i8_gemv_f32_export"):
         lib.scale_u8_grouped_i8_gemv_f32_export.argtypes = [
             ctypes.POINTER(ctypes.c_float),
