@@ -155,7 +155,10 @@ mmap remains the hot-path default.
 
 Full frontier table: `bench/bench_io_ceiling.py --heavy --full`. Quick smoke: `--heavy` only (F1+F3+F5, 12 tokens).
 
-**I/O cap = inf/compute** on stream+cache after promote means staging ≈ 0 — steady state is **compute-bound** on CPU F5, not unlimited SSD speed.
+**I/O cap = inf/compute** on stream+cache after promote means staging ≈ 0. The
+observed F5 steady state is CPU-forward-limited in that probe. The timing does
+not show whether arithmetic units, cache, DRAM, or the physical SSD is the
+limiting resource.
 
 **Per-tier bottleneck after the June 27 fixes:**
 

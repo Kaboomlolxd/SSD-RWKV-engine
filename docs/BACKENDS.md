@@ -99,10 +99,12 @@ When `RWKV_CPU_THREADS` is unset or `auto`, the engine provides manifest
 | `1280–2047` | 2–4, host-scaled |
 | `>=2048` | 2–4, host-scaled and capped |
 
-The policy is intentionally not “all host threads”: single-token quantized
-GEMV is memory/cache bound on the measured Windows AVX2 host, and eight native
-threads slowed the 2.9B runs. `RWKV_CPU_THREADS=N` remains the escape hatch for
-benchmarking another CPU.
+The policy is intentionally not “all host threads”. Single-token quantized
+GEMV has low arithmetic intensity, so it often waits on the cache or memory
+bandwidth. The existing runs establish that CPU forward time dominates and
+that eight native threads slowed the 2.9B runs. They do not measure DRAM
+bandwidth saturation or physical SSD service time. `RWKV_CPU_THREADS=N`
+remains the escape hatch for benchmarking another CPU.
 
 ### Native layer-local execution and cache accounting
 
@@ -198,6 +200,16 @@ metadata, and matrix shape. Missing uploads fail at evaluation with a data
 error instead of producing partial logits. CUDA/Metal/other accelerator
 offload keeps the ordinary GGML path; native grouped-U8 is deliberately not an
 accelerator claim.
+
+For aligned grouped-U8 matrices, the native GEMV now computes the input sum of
+each quantization group once per activation vector and reuses it across output
+rows. Workers receive contiguous output-row ranges, which keeps their packed
+weight reads sequential. The change removes repeated reductions and group
+boundary work from the row loop. It does not decode or retain the matrix, so
+the packed weight stream can still be limited by cache or memory bandwidth.
+The transposed adapter path and unaligned group layouts keep the earlier
+kernel. The native DLL was rebuilt after this change; no new throughput or
+parity measurement has been run.
 
 ### Provider-backed streaming boundary
 

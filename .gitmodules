@@ -1,6 +1,6 @@
 [submodule "backends/rwkvcpp_ref"]
 	path = backends/rwkvcpp_ref
-	url = https://github.com/RWKV/rwkv.cpp.git
+	url = https://github.com/Kaboomlolxd/rwkv.cpp.git
 
 [submodule "test_model/ChatRWKV"]
 	path = test_model/ChatRWKV
